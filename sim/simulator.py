@@ -1,40 +1,14 @@
-import cmath as cm
 import numpy as np
-
-# 2x2 Mach-Zehnder Interferometer
-n_ch = 6
-phi = [cm.pi/2, 4*cm.pi/5]
-
-assert n_ch % 2 == 0
-
-
-s_in = np.zeros(n_ch).reshape((-1, 1))
-s_in[0] = 1
-
-sigma = (phi[0] + phi[1])/2
-delta = (phi[0] - phi[1])/2
-
-M = []
-
-M.append(np.identity(n_ch, dtype='complex'))
-
-m = np.array([[cm.exp(sigma*complex(0, 1)) * cm.sin(delta), cm.exp(sigma*complex(0,1)) * cm.cos(delta)], [cm.exp(sigma*complex(0, 1)) * cm.cos(delta), -cm.exp(sigma*complex(0, 1)) * cm.sin(delta)]])
-
-x_offset = 0
-y_offset = 0
-
-M[0][x_offset:x_offset+m.shape[0], y_offset:y_offset+m.shape[1]] = m
-
-#print(M[0])
-#print(f"Input state: {s_in}")
-
-res = np.matmul(M[0], s_in)
-#print(f"Resulting state:\n {res}")
 
 class Clements:
     def __init__(self, n_ch: int):
         num_layers = n_ch
+
         self.M_layer = np.zeros((num_layers, n_ch, n_ch), dtype='complex')
+        for layer in range(self.M_layer.shape[0]):
+            self.M_layer[layer] = np.identity(n_ch, dtype='complex')
+
+        self.eff_unitary = np.identity(n_ch, dtype='complex')
         self.phi = np.zeros((n_ch, n_ch//2, 2), dtype='complex') # Layer, MZI per layer, heater per MZI
         self.sigma = np.zeros((n_ch, n_ch//2))
         self.delta = np.zeros((n_ch, n_ch//2))
@@ -58,17 +32,47 @@ class Clements:
                 x_offset += 2*mzi
                 y_offset += 2*mzi
 
-                m = np.array([[cm.exp(self.sigma[layer_num][mzi]*complex(0,1)) * cm.sin(self.delta[layer_num][mzi]),\
-                            cm.exp(self.sigma[layer_num][mzi]*complex(0,1)) * cm.cos(self.delta[layer_num][mzi])],\
-                            [cm.exp(self.sigma[layer_num][mzi]*complex(0, 1)) * cm.cos(self.delta[layer_num][mzi]),\
-                            -cm.exp(self.sigma[layer_num][mzi]*complex(0, 1)) * cm.sin(self.delta[layer_num][mzi])]])
+                m = np.array([[np.exp(self.sigma[layer_num][mzi]*1j) * np.sin(self.delta[layer_num][mzi]),\
+                               np.exp(self.sigma[layer_num][mzi]*1j) * np.cos(self.delta[layer_num][mzi])],\
+                              [np.exp(self.sigma[layer_num][mzi]*1j) * np.cos(self.delta[layer_num][mzi]),\
+                               -np.exp(self.sigma[layer_num][mzi]*1j) * np.sin(self.delta[layer_num][mzi])]])
 
                 self.M_layer[layer_num][x_offset:x_offset+m.shape[0], y_offset:y_offset+m.shape[1]] = m
 
+            self.eff_unitary = np.matmul(self.M_layer[layer_num], self.eff_unitary)
+    
+    def execute(self, state: list[complex]):
+        self.state = np.array(state, dtype='complex').reshape(-1, 1)
+        self.state = np.matmul(self.eff_unitary, self.state)
+        return self.state
+
     def display(self):
-        print(self.M_layer)
+        print(self.eff_unitary)
 
 chip = Clements(6)
-chip.configure(layer_num=0, mzi=0, phi=[cm.pi, cm.pi/2])
+
+chip.configure(layer_num=0, mzi=0, phi=[np.pi/2, 3*np.pi/2])
+chip.configure(layer_num=0, mzi=1, phi=[0, 0])
+chip.configure(layer_num=0, mzi=2, phi=[0, 0])
+
+chip.configure(layer_num=1, mzi=0, phi=[np.pi/2, 3*np.pi/2])
+chip.configure(layer_num=1, mzi=1, phi=[0, 0])
+
+chip.configure(layer_num=2, mzi=0, phi=[np.pi/2, 3*np.pi/2])
+chip.configure(layer_num=2, mzi=1, phi=[0, 0])
+chip.configure(layer_num=2, mzi=2, phi=[0, 0])
+
+chip.configure(layer_num=3, mzi=0, phi=[0, 0])
+chip.configure(layer_num=3, mzi=1, phi=[0, 0])
+
+chip.configure(layer_num=4, mzi=0, phi=[0, 0])
+chip.configure(layer_num=4, mzi=1, phi=[0, 0])
+chip.configure(layer_num=4, mzi=2, phi=[0, 0])
+
+chip.configure(layer_num=5, mzi=0, phi=[np.pi/2, 3*np.pi/2])
+chip.configure(layer_num=5, mzi=1, phi=[0, 0])
 chip.build()
-chip.display()
+
+state = chip.execute([1, 0, 0, 0, 0, 0])
+print("Resulting state:\n")
+print(np.round(state, 2))
