@@ -95,7 +95,7 @@ class Compiler:
         layer_num = mzi.layer_num
         index = mzi.index
 
-        if layer_num > 2: # Connect predecessors
+        if layer_num > 0: # Connect predecessors
             if index > 0:
                 if self.mzi[layer_num-1][index-1] != None:
                     mzi.upper_pred = self.mzi[layer_num-1][index-1]
