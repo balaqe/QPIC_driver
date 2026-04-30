@@ -3,8 +3,8 @@ import numpy as np
 from copy import deepcopy
 
 class Mzi:
-    def __init__(self):
-        self.active = False # Switch for indicating whether the mzi is active in the grid
+    def __init__(self, isactive = True):
+        self.active = isactive # Switch for indicating whether the mzi is active in the grid
 
         self.layer_num: int # Index of the accompanying layer
         self.index: int # Index within a given layer
@@ -47,13 +47,13 @@ class Compiler:
 
         # Initialize MZI structure given the mesh size
         # self.mzi = [[Mzi() for _ in range(x_shape+1)] for _ in range(y_shape)] # x_shape + 1 to account for initial phase shifters
-        self.mzi = [[Mzi() for _ in range(x_shape)] for _ in range(y_shape+1)] # y_shape + 1 to account for initial phase shifters
+        self.mzi = [[Mzi(isactive=False) for _ in range(x_shape)] for _ in range(y_shape+1)] # y_shape + 1 to account for initial phase shifters
         # self.phase_shifter = [[Phase_shifter() for _ in range(x_shape+1)] for _ in range(y_shape)]
         self.phase_shifter = [[Phase_shifter() for _ in range(x_shape)] for _ in range(y_shape+1)]
 
         V = deepcopy(U)
 
-        for diag_id in range(x_shape): # Diagonals starting from the bottom left
+        for diag_id in range(x_shape-1): # Diagonals starting from the bottom left
             for elem_id in range(diag_id + 1):
             # for elem_id in range(diag_id):
                 y = y_shape - diag_id + elem_id - 1
@@ -85,7 +85,7 @@ class Compiler:
 
                     mzi = Mzi()
                     mzi.layer_num = elem_id + 1 # Odd side (start at 1 because layer 0 is phase shifters)
-                    mzi.index = diag_id # Don't divide by 2 to allow half-step offset between layers
+                    mzi.index = diag_id - (mzi.layer_num-1) # Don't divide by 2 to allow half-step offset between layers
                     mzi.delta = delta
                     mzi.sigma = sigma
                     mzi.phase_diff = phase_diff
@@ -114,8 +114,16 @@ class Compiler:
                     V = M @ V
 
                     mzi = Mzi()
-                    mzi.layer_num = x_shape - elem_id - 1 # Even side
-                    mzi.index = y_shape - diag_id - 1 # Don't divide by 2 to allow half-step offset between layers
+                    mzi.layer_num = x_shape - elem_id # Even side (don't subtract 1 because the initial phase shifters make the circuit length x_shape+1)
+                    # print(f"x_shape = {x_shape}, elem_id = {elem_id}")
+                    # mzi.index = y_shape - 2*diag_id - 1 # Don't divide by 2 to allow half-step offset between layers
+                    # mzi.index = elem_id*2 + (1-mzi.layer_num%2)
+                    diag_offset = y_shape - (diag_id + 2)
+                    # print(f"diag_offset = {diag_offset}")
+                    mzi.index = diag_offset + elem_id
+
+                    # print(f"y_shape = {y_shape}, diag_id = {elem_id}")
+                    print(f"diag_id = {diag_id}, elem_id = {elem_id}, layer_num = {mzi.layer_num}, index = {mzi.index}")
                     mzi.delta = delta
                     mzi.sigma = sigma
                     mzi.phase_diff = phase_diff
@@ -127,6 +135,7 @@ class Compiler:
         layer_num = mzi.layer_num
         index = mzi.index
         self.mzi[layer_num][index] = mzi
+        # print(f"is active? {self.mzi[layer_num][index].active}")
 
         if layer_num > 0: # Connect predecessors
             if index > 0:
@@ -167,19 +176,30 @@ class Compiler:
 
 
 
-U = np.array( # CNOT
-    [
-        [1, 0, 0, 0],
-        [0, 1, 0, 0],
-        [0, 0, 0, 1],
-        [0, 0, 1, 0]
-    ]
-)
+# U = np.array( # CNOT
+#     [
+#         [1, 0, 0, 0],
+#         [0, 1, 0, 0],
+#         [0, 0, 0, 1],
+#         [0, 0, 1, 0]
+#     ]
+# )
+U = np.array([
+    [1, 0, 0, 0, 0, 0],
+    [0, 1, 0, 0, 0, 0],
+    [0, 0, 1, 0, 0, 0],
+    [0, 0, 0, 1, 0, 0],
+    [0, 0, 0, 0, 0, 1],
+    [0, 0, 0, 0, 1, 0],
+])
 
 compiler = Compiler()
 compiler.compile(U)
 
+i = 0
 for row in compiler.mzi:
     for mzi in row:
+        # print(f"i = {i}: is active? {mzi.active}")
+        i += 1
         if not mzi.active: continue
         print(f"mzi({mzi.layer_num}, {mzi.index}): delta = {mzi.delta}, sigma = {mzi.sigma}")
