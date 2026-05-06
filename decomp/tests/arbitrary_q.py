@@ -18,6 +18,10 @@ class Mzi:
         self.phi = [complex, complex] # Phi1 and phi2
         self.phase_diff: complex # Phase difference to be added to lower_pred
 
+    def get_phases(self):
+        self.phi[0] = self.sigma + self.delta
+        self.phi[1] = self.sigma - self.delta
+
 class Phase_shifter:
     def __init__(self):
         self.active = False
@@ -90,6 +94,7 @@ class Compiler:
                     mzi.sigma = sigma
                     mzi.phase_diff = phase_diff
                     mzi.active = True
+                    mzi.get_phases()
                     self.insert_mzi(mzi)
 
                 else: # j = 0, 2, 4, ...
@@ -128,7 +133,10 @@ class Compiler:
                     mzi.sigma = sigma
                     mzi.phase_diff = phase_diff
                     mzi.active = True
+                    mzi.get_phases()
                     self.insert_mzi(mzi)
+
+        self.relax_phases()
 
 
     def insert_mzi(self, mzi: Mzi):
@@ -173,6 +181,20 @@ class Compiler:
                     mzi.upper_pred = self.phase_shifter[layer_num+1][index+1]
                     self.phase_shifter[layer_num+1][index+1].succ = mzi
 
+    def relax_phases(self):
+        for layer_num in reversed(range(len(self.mzi))):
+            for mzi in self.mzi[layer_num]: # select layer
+                if not mzi.active or mzi.phase_diff == 0: continue
+                phase_diff = mzi.phase_diff
+                for index in range(mzi.index+2, len(self.mzi[0]), 2):
+                    print(f"index = {index}, len(self.mzi) = {len(self.mzi[0])}")
+                    print(f"type of phi[0]: {self.mzi[layer_num][index].phi[0]}, type of phase_diff: {}")
+                    self.mzi[layer_num][index].phi[0] -= mzi.phase_diff
+                    self.mzi[layer_num][index].phi[1] -= mzi.phase_diff
+                for index in range(0, len(self.mzi), 2):
+                    self.mzi[layer_num-1][index].phi[0] += mzi.phase_diff
+                    self.mzi[layer_num-1][index].phi[1] += mzi.phase_diff
+
 
 
 
@@ -202,4 +224,6 @@ for row in compiler.mzi:
         # print(f"i = {i}: is active? {mzi.active}")
         i += 1
         if not mzi.active: continue
-        print(f"mzi({mzi.layer_num}, {mzi.index}): delta = {mzi.delta}, sigma = {mzi.sigma}")
+        print(f"mzi({mzi.layer_num}, {mzi.index}): phi1 = {mzi.phi[0]}, phi2 = {mzi.phi[1]}")
+        if mzi.phase_diff != 0:
+            print(f"WARNING! phase diff is not zero on mzi({mzi.layer_num}, {mzi.index}).phase_diff = {mzi.phase_diff}")
