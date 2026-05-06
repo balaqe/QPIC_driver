@@ -28,6 +28,8 @@ class Chip():
         self.qontrol = qontrol
         self.mzi_list: list[MZI]
         self.mzi_list = []
+        self.ext_phase_list: list[PhaseShifter]
+        self.ext_phase_list = []
     
     def set_config(self, phases):
         for mzi in phases:
@@ -59,6 +61,9 @@ class Chip():
     def add_mzi(self, mzi: MZI):
         self.mzi_list.append(mzi)
 
+    def add_ext_phase(self, phase_shifter: PhaseShifter):
+        self.ext_phase_list.append(phase_shifter)
+
     def get_dictionary(self):
         res = {}
         for mzi in self.mzi_list:
@@ -66,6 +71,10 @@ class Chip():
                 "shifter1": mzi.shifter[0].get_params_dict(),
                 "shifter2": mzi.shifter[1].get_params_dict()
             }
+
+        for shifter in self.ext_phase_list:
+            res[shifter.name] = shifter.get_params_dict()
+
         return res
 
     def save_parameters(self):
@@ -79,14 +88,17 @@ class Chip():
         self.mzi_list = []
 
         for m_name, data_point in data["clements"].items():
-            shifter1 = PhaseShifter(chip=self, name=data_point["shifter1"]["name"])
-            shifter2 = PhaseShifter(chip=self, name=data_point["shifter2"]["name"])
+            if "shifter1" in data_point: # Check if it's an MZI
+                shifter1 = PhaseShifter(chip=self, name=data_point["shifter1"]["name"])
+                shifter2 = PhaseShifter(chip=self, name=data_point["shifter2"]["name"])
 
-            shifter1.set_params(data_point["shifter1"])
-            shifter2.set_params(data_point["shifter2"])
+                shifter1.set_params(data_point["shifter1"])
+                shifter2.set_params(data_point["shifter2"])
 
-            mzi = MZI(chip=self, name=m_name, shifter1=shifter1, shifter2=shifter2)
-            self.mzi_list.append(mzi)
+                mzi = MZI(chip=self, name=m_name, shifter1=shifter1, shifter2=shifter2)
+                self.mzi_list.append(mzi)
+            else:
+                self.ext_phase_list.append(PhaseShifter(chip=self, name=m_name))
 
 class MZI():
     def __init__(self, chip, name, shifter1: PhaseShifter, shifter2: PhaseShifter, folder=None):
@@ -109,6 +121,10 @@ class PhaseShifter():
         self.in_port = None
         self.out_port = None
         self.channel = None
+
+        self.phase_flip = False
+
+        self.temperature = None
 
         self.chip_config = None
         
@@ -142,26 +158,30 @@ class PhaseShifter():
 
     def set_params(self, input):
         self.in_port = input["in_port"]
-        self.out_port = input["out_port"] 
-        self.channel = input["channel"] 
+        self.out_port = input["out_port"]
+        self.channel = input["channel"]
 
-        self.chip_config = input["chip_config"] 
+        self.phase_flip = input["phase_flip"]
+
+        self.temperature = input["temperature"]
+
+        self.chip_config = input["chip_config"]
         
-        self.volt_0 = input["volt_0"] 
-        self.volt_pi = input["volt_pi"] 
-        self.volt_pi2 = input["volt_pi2"] 
-        self.volt_3pi2 = input["volt_3pi2"] 
+        self.volt_0 = input["volt_0"]
+        self.volt_pi = input["volt_pi"]
+        self.volt_pi2 = input["volt_pi2"]
+        self.volt_3pi2 = input["volt_3pi2"]
         
-        self.visibility = input["visibility"] 
+        self.visibility = input["visibility"]
         
-        self.rho0 = input["rho0"] 
-        self.rho1 = input["rho1"] 
-        self.rho2 = input["rho2"] 
+        self.rho0 = input["rho0"]
+        self.rho1 = input["rho1"]
+        self.rho2 = input["rho2"]
         
-        self.A = input["A"] 
-        self.B = input["B"] 
-        self.omega = input["omega"] 
-        self.phi_0 = input["phi_0"] 
+        self.A = input["A"]
+        self.B = input["B"]
+        self.omega = input["omega"]
+        self.phi_0 = input["phi_0"]
         
         self.a = input["a"] 
         self.b = input["b"] 
@@ -178,6 +198,8 @@ class PhaseShifter():
                 "in_port": self.in_port,
                 "out_port": self.out_port,
                 "channel": self.channel,
+                "phase_flip": self.phase_flip,
+                "temperature": self.temperature,
                 "chip_config": self.chip_config,
                 "volt_0": self.volt_0,
                 "volt_pi": self.volt_pi,
