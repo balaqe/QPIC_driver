@@ -23,21 +23,34 @@ import matplotlib.pyplot as plt
 
 class Chip():
     def __init__(self, qontrol, folder=None):
-        print(f"Chip initialized, mzi_list set: {id(self)}")
+        print(f"Chip initialized, mzi_dict set: {id(self)}")
         self.folder = folder or select_folder()
         self.qontrol = qontrol
-        self.mzi_list: list[MZI]
-        self.mzi_list = []
-        self.ext_phase_list: list[PhaseShifter]
-        self.ext_phase_list = []
+        self.mzi_dict = {}
+        self.ext_phase_dict = {}
+        self.load_params(folder)
     
-    def set_config(self, phases):
-        for mzi in phases:
-            ps = PhaseShifter(self, mzi)
-            if not os.path.exists(ps.folder + 'data.json'):
-                raise FileNotFoundError(f'data.json file not found in {ps.folder}')
-            else:
-                ps.set_phase(phases[mzi])
+    def set_config(self, data):
+        for m_name, data_point in data.items():
+            print(f"type of datapoint: {type(data_point)}")
+            if 'shifter1' in data_point: # Check if it's an MZI
+                ps = self.mzi_dict[m_name].shifter[0]
+                ps.set_phase(data_point['shifter1']*np.pi)
+            if 'shifter2' in data_point:
+                ps = self.mzi_dict[m_name].shifter[1]
+                ps.set_phase(data_point['shifter2']*np.pi)
+
+            if 'shifter1' not in data_point and 'shifter2' not in data_point:
+                ps = self.ext_phase_dict[m_name]
+                ps.set_phase(data_point*np.pi)
+
+        # for key, mzi in phases.items():
+
+        #     ps = PhaseShifter(self, mzi)
+        #     if not os.path.exists(ps.folder + 'data.json'):
+        #         raise FileNotFoundError(f'data.json file not found in {ps.folder}')
+        #     else:
+        #         ps.set_phase(phases[mzi])
 
     def load_config(self, file_path, keys_arr=None):
 
@@ -59,19 +72,14 @@ class Chip():
         self.set_config(chip_config)    
 
     def add_mzi(self, mzi: MZI):
-        self.mzi_list.append(mzi)
+        self.mzi_dict[mzi.name] = mzi
 
     def add_ext_phase(self, phase_shifter: PhaseShifter):
-        self.ext_phase_list.append(phase_shifter)
+        self.ext_phase_dict[phase_shifter.name] = phase_shifter
 
     def get_dictionary(self):
         res = {}
-        for mzi in self.mzi_list:
-            for shifter in mzi.shifter:
-                if shifter.phase_flip:
-                    shifter.phi_0 += np.pi
-                    shifter.phase_flip = False
-
+        for _, mzi in self.mzi_dict.items():
             res[mzi.name] = {
                 "shifter1": mzi.shifter[0].get_master_params(),
                 "shifter2": mzi.shifter[1].get_master_params()
@@ -79,11 +87,8 @@ class Chip():
             mzi.shifter[0].save_parameters()
             mzi.shifter[1].save_parameters()
 
-        for shifter in self.ext_phase_list:
+        for _, shifter in self.ext_phase_dict.items():
             res[shifter.name] = shifter.get_master_params()
-            if shifter.phase_flip:
-                shifter.phi_0 += np.pi
-                shifter.phase_flip = False
             shifter.save_parameters()
 
         return res
@@ -93,23 +98,27 @@ class Chip():
         save_to_json(save_path, name="clements", data=self.get_dictionary())
 
     def load_params(self, file_path):
-        with open(file_path, "r") as f:
-            data = json.load(f)
+        if os.path.exists(file_path):
+            if "data_master.json" not in file_path:
+                file_path = os.path.join(file_path, "data_master.json")
+            with open(file_path, "r") as f:
+                data = json.load(f)
         
-        self.mzi_list = []
+            self.mzi_dict = {}
 
-        for m_name, data_point in data["clements"].items():
-            if "shifter1" in data_point: # Check if it's an MZI
-                shifter1 = PhaseShifter(chip=self, name=data_point["shifter1"]["name"])
-                shifter2 = PhaseShifter(chip=self, name=data_point["shifter2"]["name"])
+            for m_name, data_point in data.items():
+                print(f"m_name found: {m_name}")
+                if "shifter1" in data_point: # Check if it's an MZI
+                    shifter1 = PhaseShifter(chip=self, name=data_point["shifter1"]["name"])
+                    shifter2 = PhaseShifter(chip=self, name=data_point["shifter2"]["name"])
 
-                shifter1.set_params(data_point["shifter1"])
-                shifter2.set_params(data_point["shifter2"])
+                    shifter1.set_params(data_point["shifter1"])
+                    shifter2.set_params(data_point["shifter2"])
 
-                mzi = MZI(chip=self, name=m_name, shifter1=shifter1, shifter2=shifter2)
-                self.mzi_list.append(mzi)
-            else:
-                self.ext_phase_list.append(PhaseShifter(chip=self, name=m_name))
+                    mzi = MZI(chip=self, name=m_name, shifter1=shifter1, shifter2=shifter2)
+                    self.mzi_dict[mzi.name] = mzi
+                else:
+                    self.ext_phase_dict[m_name] = PhaseShifter(chip=self, name=m_name)
 
 class MZI():
     def __init__(self, chip, name, shifter1: PhaseShifter, shifter2: PhaseShifter, folder=None):
@@ -352,6 +361,10 @@ class PhaseShifter():
         self.A, self.B, self.omega, self.phi_0 = popt
         self.rho0, self.rho1, self.rho2 = self.omega * self.c, self.omega * self.b, self.omega * self.a
 
+        if self.phase_flip:
+            self.phi_0 += np.pi
+
+
         # replace data with the interpolated data
         # self.opt_voltage_arr = opt_voltage_arr_interp
         # self.opt_power_arr[0] = opt_power_arr_interp
@@ -399,7 +412,7 @@ class PhaseShifter():
         ax2.tick_params(axis='y', labelcolor='black')
         ax2.grid(color='k', linestyle=':')
 
-        plt.title('MZI '+ self.name)
+        plt.title('MZI '+ self.name + (" (flipped)" if self.phase_flip else " (normal)"))
         plt.savefig(self.folder+f'MZI_{self.name}_optical.png', dpi=300)
         plt.show()
         plt.close()
