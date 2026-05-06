@@ -67,6 +67,11 @@ class Chip():
     def get_dictionary(self):
         res = {}
         for mzi in self.mzi_list:
+            for shifter in mzi.shifter:
+                if shifter.phase_flip:
+                    shifter.phi_0 += np.pi
+                    shifter.phase_flip = False
+
             res[mzi.name] = {
                 "shifter1": mzi.shifter[0].get_master_params(),
                 "shifter2": mzi.shifter[1].get_master_params()
@@ -76,6 +81,9 @@ class Chip():
 
         for shifter in self.ext_phase_list:
             res[shifter.name] = shifter.get_master_params()
+            if shifter.phase_flip:
+                shifter.phi_0 += np.pi
+                shifter.phase_flip = False
             shifter.save_parameters()
 
         return res
