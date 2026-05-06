@@ -32,8 +32,11 @@ class Qontrol:
         print("Max current for channel {} is {} A".format(channel, self.q.imax[channel]))
     
     def set_v(self, channel, voltage):
-        # if voltage < 0 or voltage > 6:
-        #     raise ValueError("Voltage must be between 0 and 6 V")
+        if voltage < 0 or voltage > 12:
+            raise ValueError("Voltage must be between 0 and 12 V")
+        if channel > 31:
+            voltage /= 2
+
         self.q.v[channel] = voltage
         
     def close(self):
