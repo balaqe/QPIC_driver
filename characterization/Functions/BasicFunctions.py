@@ -34,17 +34,17 @@ def save_to_json(file_path, name, data):
             return [convert_numpy_to_list(item) for item in obj]
         return obj
     data = convert_numpy_to_list(data)
-    if os.path.exists(file_path):
-        with open(file_path, "r") as f:
-            datafile = json.load(f)
-    else:
-        datafile = {}
-    if name is not None:
-        datafile[name] = data
-    else: # if the data is already a dictionnaru ready to be saved
-        datafile = data
+    # if os.path.exists(file_path):
+    #     with open(file_path, "r") as f:
+    #         datafile = json.load(f)
+    # else:
+    #     datafile = {}
+    # if name is not None:
+    #     datafile[name] = data
+    # else: # if the data is already a dictionnaru ready to be saved
+    #     datafile = data
     with open(file_path, "w") as f:
-        json.dump(datafile, f, indent=4)
+        json.dump(data, f, indent=4)
 
 def save_to_txt(file_path, data):
     with open(file_path, "w") as f:

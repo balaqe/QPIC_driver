@@ -68,12 +68,14 @@ class Chip():
         res = {}
         for mzi in self.mzi_list:
             res[mzi.name] = {
-                "shifter1": mzi.shifter[0].get_params_dict(),
-                "shifter2": mzi.shifter[1].get_params_dict()
+                "shifter1": mzi.shifter[0].get_master_params(),
+                "shifter2": mzi.shifter[1].get_master_params()
             }
+            mzi.shifter[0].save_parameters()
+            mzi.shifter[1].save_parameters()
 
         for shifter in self.ext_phase_list:
-            res[shifter.name] = shifter.get_params_dict()
+            res[shifter.name] = shifter.get_master_params()
 
         return res
 
@@ -127,6 +129,8 @@ class PhaseShifter():
         self.temperature = None
 
         self.chip_config = None
+
+        self.temperature = None
         
         self.volt_0 = None
         self.volt_pi = None
@@ -154,7 +158,7 @@ class PhaseShifter():
         self.opt_power_arr = None
         
         # Initialization of the attributes if one file already exists
-        self.load_parameters()
+        # self.load_parameters()
 
     def set_params(self, input):
         self.in_port = input["in_port"]
@@ -187,11 +191,6 @@ class PhaseShifter():
         self.b = input["b"] 
         self.c = input["c"] 
         
-        self.voltage_arr = input["voltage_arr"] 
-        self.current_arr = input["current_arr"] 
-        self.opt_voltage_arr = input["opt_voltage_arr"] 
-        self.opt_power_arr = input["opt_power_arr"] 
-
     def get_params_dict(self):
             return {
                 "name": self.name,
@@ -220,6 +219,32 @@ class PhaseShifter():
                 "current_arr": self.current_arr,
                 "opt_voltage_arr": self.opt_voltage_arr,
                 "opt_power_arr": self.opt_power_arr
+            }
+    
+    def get_master_params(self):
+            return {
+                "name": self.name,
+                "in_port": self.in_port,
+                "out_port": self.out_port,
+                "channel": self.channel,
+                "chip_config": self.chip_config,
+                "temperature": self.temperature,
+                "phase_flip": self.phase_flip,
+                "volt_0": self.volt_0,
+                "volt_pi": self.volt_pi,
+                "volt_pi2": self.volt_pi2,
+                "volt_3pi2": self.volt_3pi2,
+                "visibility": self.visibility,
+                "rho0": self.rho0,
+                "rho1": self.rho1,
+                "rho2": self.rho2,
+                "A": self.A,
+                "B": self.B,
+                "omega": self.omega,
+                "phi_0": self.phi_0,
+                "a": self.a,
+                "b": self.b,
+                "c": self.c
             }
             
     def load_parameters(self):
