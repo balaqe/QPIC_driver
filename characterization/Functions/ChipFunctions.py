@@ -76,6 +76,7 @@ class Chip():
 
         for shifter in self.ext_phase_list:
             res[shifter.name] = shifter.get_master_params()
+            shifter.save_parameters()
 
         return res
 
