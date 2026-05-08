@@ -32,28 +32,38 @@ chip.set_config(
         'MZI0': {
             'shifter1': 1,
         },
+        'MZI5': {
+            'shifter1': 0.5,
+        },
+        'MZI10': {
+            'shifter1': 0.5,
+        },
+        'MZI8': {
+            'shifter1': 1,
+        },
     }
 )
 
-ps = PhaseShifter(chip, name='H16')
-ps.in_port  = 10
-ps.out_port = 10
-ps.channel  = 16
+ps = PhaseShifter(chip, name='H30')
+ps.in_port  = 7
+ps.out_port = 23
+ps.channel  = 30
 ps.temperature = 15
-ps.phase_flip = True
+ps.phase_flip = False
 
-mzi = None
-mzi_name = "MZI3"
+chip.add_ext_phase(ps)
+# mzi = None
+# mzi_name = "MZI13"
 
-top_shifter = True
-if top_shifter:
-    ps2 = PhaseShifter(chip, name='')
-    mzi = MZI(chip, name=mzi_name, shifter1=ps, shifter2=ps2)
-else:
-    mzi = chip.mzi_dict[mzi_name]
-    mzi.shifter[1] = ps
+# top_shifter = False
+# if top_shifter:
+#     ps2 = PhaseShifter(chip, name='')
+#     mzi = MZI(chip, name=mzi_name, shifter1=ps, shifter2=ps2)
+# else:
+#     mzi = chip.mzi_dict[mzi_name]
+#     mzi.shifter[1] = ps
 
-chip.add_mzi(mzi)
+# chip.add_mzi(mzi)
 
 # ps1.chip_config = {
 #    'H1': 1

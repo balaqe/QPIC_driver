@@ -354,7 +354,7 @@ class PhaseShifter():
             p0=[
                 (np.max(opt_power_arr_interp)-np.min(opt_power_arr_interp))/2,
                 np.min(opt_power_arr_interp),
-                0.02, 
+                0.01, 
                 0]
             )
         
