@@ -35,7 +35,7 @@ for row in compiler.mesh_elements:
             chip.configure_phase(layer_num=element.layer_num, shifter=element.index, phi=element.phi)
 
 chip.build()
-chip.display()
+# chip.display()
 
 
 sym_state = []

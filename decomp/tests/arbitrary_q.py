@@ -16,7 +16,7 @@ class Mesh_element(ABC):
         pass
 
 class Mzi(Mesh_element):
-    def __init__(self, isactive=True):
+    def __init__(self, isactive=True, delta: complex=None, sigma: complex=None):
         self.active = isactive # Switch for indicating whether the mzi is active in the grid
 
         # self.layer_num: int # Index of the accompanying layer
@@ -26,14 +26,20 @@ class Mzi(Mesh_element):
         self.upper_succ: Mzi | Phase_shifter # Upper successor
         self.lower_succ: Mzi | Phase_shifter # Lower successor
 
-        self.sigma: complex
-        self.delta: complex
+        self.sigma = sigma if sigma else 0
+        self.delta = delta if delta else 0
         self.phi = [0, 0] # Phi1 and phi2
         self.phase_diff: complex = 0 # Phase difference to be added to lower_pred
+
+        self.get_phase()
 
     def add_phase_offset(self, offset: complex):
         self.phi[0] += offset
         self.phi[1] += offset
+
+    def get_phase(self):
+        self.phi[0] = self.sigma + self.delta
+        self.phi[1] = self.sigma - self.delta
 
 class Phase_shifter(Mesh_element):
     def __init__(self, isactive=True):
@@ -107,15 +113,16 @@ class Compiler:
                     print(f"VM")
                     # VM
                     delta = 0
-                    if V[y][x+1] != 0:
-                        delta = np.atan(-V[y][x] / V[y][x+1])
+                    if V[y][x] != 0:
+                        delta = np.atan(-V[y][x+1] / V[y][x])
                     else:
-                        delta = np.pi/2 # Pi shift which produces identity
+                        delta = np.pi/2 # Pi/2 shift which produces identity
 
                     print(f"delta = {delta}")
 
                     sigma = np.angle(V[y][x])
                     phase_diff = np.angle(V[y][x]) - np.angle(V[x][y])
+
                     # phase_diff = np.angle(V[y][x]) - np.angle(V[y_shape-1 - y][x_shape-1 - x])
 
                     m = np.array([[np.exp(sigma*1j) * np.sin(delta), np.exp(sigma*1j) * np.cos(delta)],\
@@ -133,11 +140,9 @@ class Compiler:
 
                     V = V @ M
 
-                    mzi = Mzi()
+                    mzi = Mzi(delta=delta, sigma=sigma)
                     mzi.layer_num = elem_id + 1 # Odd side (start at 1 because layer 0 is phase shifters)
                     mzi.index = diag_id - (mzi.layer_num-1) # Don't divide by 2 to allow half-step offset between layers
-                    mzi.delta = delta
-                    mzi.sigma = sigma
                     mzi.phase_diff += phase_diff
                     mzi.active = True
                     self.insert_mzi(mzi)
@@ -147,7 +152,7 @@ class Compiler:
                     # MV
                     delta = 0
                     if V[y][x] != 0:
-                        delta = np.atan(-V[y-1][x] / V[y][x])
+                        delta = np.atan(V[y-1][x] / V[y][x])
                     else:
                         delta = np.pi/2
                     print(f"delta = {delta}")
@@ -157,7 +162,8 @@ class Compiler:
                     m = np.array([[np.exp(sigma*1j) * np.sin(delta), np.exp(sigma*1j) * np.cos(delta)],\
                                 [np.exp(sigma*1j) * np.cos(delta), -np.exp(sigma*1j) * np.sin(delta)]])
 
-                    x_offset = x if x < x_shape-2 else x_shape-2
+                    # x_offset = x if x < x_shape-2 else x_shape-2
+                    x_offset = x + 1 if x + 1 < x_shape-2 else x_shape-3
                     y_offset = x_offset
 
                     M = np.identity(x_shape, dtype="complex")
@@ -167,7 +173,7 @@ class Compiler:
 
                     V = M @ V
 
-                    mzi = Mzi()
+                    mzi = Mzi(delta=delta, sigma=sigma)
                     mzi.layer_num = x_shape - elem_id # Even side (don't subtract 1 because the initial phase shifters make the circuit length x_shape+1)
                     # print(f"x_shape = {x_shape}, elem_id = {elem_id}")
                     # mzi.index = y_shape - 2*diag_id - 1 # Don't divide by 2 to allow half-step offset between layers
@@ -175,58 +181,17 @@ class Compiler:
                     diag_offset = y_shape - (diag_id + 2)
                     mzi.index = diag_offset + elem_id
 
-                    mzi.delta = delta
-                    mzi.sigma = sigma
                     mzi.phase_diff += phase_diff
                     mzi.active = True
                     self.insert_mzi(mzi)
-
+        print(f"V = {np.round(V, 2)}")
         self.relax_mesh()
-
 
     def insert_mzi(self, mzi: Mzi):
         layer_num = mzi.layer_num
         index = mzi.index
-        # self.mzi[layer_num][index] = mzi
+        mzi.get_phase()
         self.mesh_elements[layer_num][index] = mzi
-        # print(f"is active? {self.mzi[layer_num][index].active}")
-        #
-        # if layer_num > 0: # Connect predecessors
-        #     if index > 0:
-        #         if self.mzi[layer_num-1][index-1].active:
-        #             mzi.upper_pred = self.mzi[layer_num-1][index-1]
-        #             self.mzi[layer_num-1][index-1].lower_succ = mzi
-        #         elif self.phase_shifter[layer_num-1][index-1].active:
-        #             mzi.upper_pred = self.phase_shifter[layer_num-1][index-1]
-        #             self.phase_shifter[layer_num-1][index-1].succ = mzi
-        #
-        #     if index < len(self.mzi) - 1: # index < self.mzi.shape[0] - 1
-        #         if self.mzi[layer_num-1][index+1].active:
-        #             mzi.lower_pred = self.mzi[layer_num-1][index+1]
-        #             self.mzi[layer_num-1][index+1].upper_succ = mzi
-        #         elif self.phase_shifter[layer_num-1][index+1].active:
-        #             mzi.upper_pred = self.phase_shifter[layer_num-1][index+1]
-        #             self.phase_shifter[layer_num-1][index+1].succ = mzi
-        #
-        # if layer_num < len(self.mzi[0]) - 1: # Connect successors (all rows are the same length so we check the first)
-        #     if index > 0:
-        #         # print(f"DEBUG: layer_num = {layer_num}")
-        #         # print(f"DEBUG: len(self.mzi[0] - 1 = {len(self.mzi[0]) -  1}")
-        #         if self.mzi[layer_num+1][index-1].active:
-        #             mzi.upper_pred = self.mzi[layer_num+1][index-1]
-        #             self.mzi[layer_num+1][index-1].lower_succ = mzi
-        #         elif self.phase_shifter[layer_num+1][index-1].active:
-        #             mzi.upper_pred = self.phase_shifter[layer_num+1][index-1]
-        #             self.phase_shifter[layer_num+1][index-1].succ = mzi
-        #
-        #     if index < len(self.mzi) - 1:
-        #         if self.mzi[layer_num+1][index+1].active:
-        #             mzi.lower_pred = self.mzi[layer_num+1][index+1]
-        #             self.mzi[layer_num+1][index+1].upper_succ = mzi
-        #         elif self.phase_shifter[layer_num+1][index+1].active:
-        #             mzi.upper_pred = self.phase_shifter[layer_num+1][index+1]
-        #             self.phase_shifter[layer_num+1][index+1].succ = mzi
-
 
     def relax_mesh(self): # Absorb phase_diffs
         for i, layer in enumerate(self.mesh_elements):
