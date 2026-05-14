@@ -79,13 +79,13 @@ class Compiler:
             ps.layer_num = 0
             ps.index = elem_num
             self.mesh_elements[0][elem_num] = ps
-        for layer_num in range(2, y_shape+1, 2):
+        for layer_num in range(2, y_shape, 2):
             ps1 = Phase_shifter()
             ps1.layer_num = layer_num
             ps1.index = 0
             ps2 = Phase_shifter()
             ps2.layer_num = layer_num
-            ps2.index = y_shape
+            ps2.index = y_shape-1
             self.mesh_elements[layer_num][0] = ps1
             self.mesh_elements[layer_num][x_shape-1] = ps2
         for layer_num in range(y_shape+1):
@@ -100,15 +100,19 @@ class Compiler:
             # for elem_id in range(diag_id):
                 y = y_shape - diag_id + elem_id - 1
                 x = elem_id
-                # print(f"diag_id = {diag_id}; elem_id = {elem_id}; element{diag_id + elem_id}({x}, {y})")
+                print(f"diag_id = {diag_id}; elem_id = {elem_id}; element{diag_id + elem_id}({y}, {x})")
+                print(f"V = {np.round(V, 2)}")
 
                 if diag_id % 2 == 0: # j = 1, 3, 5, ... (j starts at 1 while diag_id starts at 0)
+                    print(f"VM")
                     # VM
                     delta = 0
                     if V[y][x+1] != 0:
                         delta = np.atan(-V[y][x] / V[y][x+1])
                     else:
-                        delta = np.pi # Pi shift which produces identity
+                        delta = np.pi/2 # Pi shift which produces identity
+
+                    print(f"delta = {delta}")
 
                     sigma = np.angle(V[y][x])
                     phase_diff = np.angle(V[y][x]) - np.angle(V[x][y])
@@ -117,11 +121,15 @@ class Compiler:
                     m = np.array([[np.exp(sigma*1j) * np.sin(delta), np.exp(sigma*1j) * np.cos(delta)],\
                                 [np.exp(sigma*1j) * np.cos(delta), -np.exp(sigma*1j) * np.sin(delta)]])
 
+                    print(f"m = {m}")
+
                     x_offset = x if x < x_shape-2 else x_shape-2
                     y_offset = x_offset
 
                     M = np.identity(x_shape, dtype="complex")
                     M[y_offset:y_offset+m.shape[0], x_offset:x_offset+m.shape[1]] = m
+
+                    print(f"M = {np.round(M, 2)}")
 
                     V = V @ M
 
@@ -135,12 +143,14 @@ class Compiler:
                     self.insert_mzi(mzi)
 
                 else: # j = 0, 2, 4, ...
+                    print(f"MV")
                     # MV
                     delta = 0
                     if V[y][x] != 0:
                         delta = np.atan(-V[y-1][x] / V[y][x])
                     else:
-                        delta = np.pi
+                        delta = np.pi/2
+                    print(f"delta = {delta}")
                     sigma = np.angle(V[y][x])
                     phase_diff = np.angle(V[y][x]) - np.angle(V[x][y])
 
@@ -152,6 +162,8 @@ class Compiler:
 
                     M = np.identity(x_shape, dtype="complex")
                     M[y_offset:y_offset+m.shape[0], x_offset:x_offset+m.shape[1]] = m
+
+                    print(f"M = {np.round(M, 2)}")
 
                     V = M @ V
 
@@ -238,23 +250,29 @@ class Compiler:
 #         [0, 0, 1, 0]
 #     ]
 # )
-U = np.array([
-    [1, 0, 0, 0, 0, 0],
-    [0, 1, 0, 0, 0, 0],
-    [0, 0, 1, 0, 0, 0],
-    [0, 0, 0, 1, 0, 0],
-    [0, 0, 0, 0, 0, 1],
-    [0, 0, 0, 0, 1, 0],
-])
+#
+def main():
+    U = np.array([
+        [1, 0, 0, 0, 0, 0],
+        [0, 1, 0, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0],
+        [0, 0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 1, 0],
+    ])
 
-compiler = Compiler()
-compiler.compile(U)
+    compiler = Compiler()
+    compiler.compile(U)
 
-i = 0
-for row in compiler.mesh_elements:
-    for element in row:
-        # print(f"i = {i}: is active? {mzi.active}")
-        i += 1
-        if not element.active: continue
-        if isinstance(element, Mzi): print(f"mzi({element.layer_num}, {element.index}): phi1 = {element.phi[0]}, phi2 = {element.phi[1]}")
-        if isinstance(element, Phase_shifter): print(f"phase_shifter({element.layer_num}, {element.index}): phi = {element.phi}")
+    i = 0
+    for row in compiler.mesh_elements:
+        for element in row:
+            # print(f"i = {i}: is active? {mzi.active}")
+            i += 1
+            if not element.active: continue
+            if isinstance(element, Mzi): print(f"mzi({element.layer_num}, {element.index}): phi1 = {element.phi[0]}, phi2 = {element.phi[1]}")
+            if isinstance(element, Phase_shifter): print(f"phase_shifter({element.layer_num}, {element.index}): phi = {element.phi}")
+
+
+if __name__=="__main__":
+    main()
