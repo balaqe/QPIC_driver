@@ -1,4 +1,5 @@
 import numpy as np
+import random
 
 class Clements:
     def __init__(self, n_ch: int):
@@ -56,52 +57,64 @@ class Clements:
             self.eff_unitary = self.M_layer[layer_num] @ self.eff_unitary
     
     def execute(self, state: list[complex]):
-        self.state = np.array(state, dtype='complex').reshape(-1, 1)
+        self.state = np.array(state).reshape(-1, 1)
         self.state = np.matmul(self.eff_unitary, self.state)
         return self.state
+
+    def generate_random_unitary(self):
+        for i in range(1, self.M_layer.shape[0]):
+            if i%2 == 0:
+                for j in range(self.M_layer.shape[1]//2):
+                    self.configure_mzi(layer_num=i, mzi=j, phi=[np.random.random()*2*np.pi, np.random.random()*2*np.pi])
+            else:
+                for j in range(self.M_layer.shape[1]//2 - 1):
+                    self.configure_mzi(layer_num=i, mzi=j, phi=[np.random.random()*2*np.pi, np.random.random()*2*np.pi])
+
+
+        self.build()
+        return self.eff_unitary
 
     def display(self):
         print(self.eff_unitary)
 
-chip = Clements(6)
 
-chip.configure_phase(layer_num=0, shifter=0, phi=0)
-chip.configure_phase(layer_num=0, shifter=1, phi=0)
-chip.configure_phase(layer_num=0, shifter=2, phi=0)
-chip.configure_phase(layer_num=0, shifter=3, phi=0)
-chip.configure_phase(layer_num=0, shifter=4, phi=0)
-chip.configure_phase(layer_num=0, shifter=5, phi=0)
+def main():
+    chip = Clements(6)
 
-chip.configure_mzi(layer_num=1, mzi=0, phi=[3*np.pi/2, np.pi/2])
-chip.configure_mzi(layer_num=1, mzi=1, phi=[0, 0])
-chip.configure_mzi(layer_num=1, mzi=2, phi=[0, 0])
+    chip.configure_phase(layer_num=0, shifter=0, phi=0)
+    chip.configure_phase(layer_num=0, shifter=1, phi=0)
+    chip.configure_phase(layer_num=0, shifter=2, phi=0)
+    chip.configure_phase(layer_num=0, shifter=3, phi=0)
+    chip.configure_phase(layer_num=0, shifter=4, phi=0)
+    chip.configure_phase(layer_num=0, shifter=5, phi=0)
 
-chip.configure_mzi(layer_num=2, mzi=0, phi=[0, 0])
-chip.configure_mzi(layer_num=2, mzi=1, phi=[0, 0])
+    chip.configure_mzi(layer_num=1, mzi=0, phi=[3*np.pi/2, np.pi/2])
+    chip.configure_mzi(layer_num=1, mzi=1, phi=[0, 0])
+    chip.configure_mzi(layer_num=1, mzi=2, phi=[0, 0])
 
-chip.configure_mzi(layer_num=3, mzi=0, phi=[3*np.pi/2, np.pi/2])
-chip.configure_mzi(layer_num=3, mzi=1, phi=[0, 0])
-chip.configure_mzi(layer_num=3, mzi=2, phi=[0, 0])
+    chip.configure_mzi(layer_num=2, mzi=0, phi=[0, 0])
+    chip.configure_mzi(layer_num=2, mzi=1, phi=[0, 0])
 
-chip.configure_mzi(layer_num=4, mzi=0, phi=[0, 0])
-chip.configure_mzi(layer_num=4, mzi=1, phi=[0, 0])
+    chip.configure_mzi(layer_num=3, mzi=0, phi=[3*np.pi/2, np.pi/2])
+    chip.configure_mzi(layer_num=3, mzi=1, phi=[0, 0])
+    chip.configure_mzi(layer_num=3, mzi=2, phi=[0, 0])
 
-chip.configure_mzi(layer_num=5, mzi=0, phi=[0, 0])
-chip.configure_mzi(layer_num=5, mzi=1, phi=[0, 0])
-chip.configure_mzi(layer_num=5, mzi=2, phi=[0, 0])
+    chip.configure_mzi(layer_num=4, mzi=0, phi=[0, 0])
+    chip.configure_mzi(layer_num=4, mzi=1, phi=[0, 0])
 
-chip.configure_mzi(layer_num=6, mzi=0, phi=[3*np.pi/2, np.pi/2])
-chip.configure_mzi(layer_num=6, mzi=1, phi=[0, 0])
+    chip.configure_mzi(layer_num=5, mzi=0, phi=[0, 0])
+    chip.configure_mzi(layer_num=5, mzi=1, phi=[0, 0])
+    chip.configure_mzi(layer_num=5, mzi=2, phi=[0, 0])
 
-# chip = Clements(2)
+    chip.configure_mzi(layer_num=6, mzi=0, phi=[3*np.pi/2, np.pi/2])
+    chip.configure_mzi(layer_num=6, mzi=1, phi=[0, 0])
 
-#chip.configure_mzi(layer_num=1, mzi=0, phi=[3*np.pi/2, np.pi/2])
-# chip.configure_mzi(layer_num=1, mzi=0, phi=[0, 0])
+    chip.build()
 
-chip.build()
+    state = chip.execute([1, 0, 0, 0, 0, 0])
 
-state = chip.execute([1, 0, 0, 0, 0, 0])
-# state = chip.execute([1, 0])
+    print("Resulting state:\n")
+    print(np.round(state, 2))
 
-print("Resulting state:\n")
-print(np.round(state, 2))
+if __name__=="__main__":
+    main()

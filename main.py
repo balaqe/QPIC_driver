@@ -2,6 +2,7 @@ from decomp.tests.arbitrary_q import *
 from sim.simulator import Clements
 import numpy as np
 import sympy as sp
+from scipy.stats import unitary_group
 
 # U = np.array([
 #     [1, 0, 0, 0, 0, 0],
@@ -11,12 +12,18 @@ import sympy as sp
 #     [0, 0, 0, 0, 0, 1],
 #     [0, 0, 0, 0, 1, 0],
 # ])
-U = np.array([
-    [1, 0, 0, 0],
-    [0, 1, 0, 0],
-    [0, 0, 0, 1],
-    [0, 0, 1, 0],
-])
+# U = np.array([
+#     [1, 0, 0, 0],
+#     [0, 1, 0, 0],
+#     [0, 0, 0, 1],
+#     [0, 0, 1, 0],
+# ])
+#
+chip_generator = Clements(4)
+# U = unitary_group.rvs(4)
+U = chip_generator.generate_random_unitary()
+print("INITIAL UNITARY")
+print(np.round(U, 2))
 
 compiler = Compiler()
 compiler.compile(U)
@@ -44,7 +51,7 @@ for i in range(4):
 
 state = chip.execute(sym_state)
 
-print("Resulting state:\n")
+print("\nResulting state:")
 for i in range(len(state)):
     for a in sp.preorder_traversal(state[i][0]):
         if isinstance(a, sp.Float):
@@ -53,9 +60,10 @@ print(state)
 
 state2 = U @ np.array(sym_state).reshape(-1, 1)
 
-print("Actual state")
-for a in sp.preorder_traversal(state2[0]):
-    if isinstance(a, sp.Float):
-        state2[0] = state2[0].subs(a, round(a, 1))
+print("\nActual state")
+for i in range(len(state2)):
+    for a in sp.preorder_traversal(state2[i][0]):
+        if isinstance(a, sp.Float):
+            state2[i][0] = state2[i][0].subs(a, round(a, 1))
 print(state2)
 

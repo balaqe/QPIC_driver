@@ -143,6 +143,7 @@ class Compiler:
                     mzi = Mzi(delta=delta, sigma=sigma)
                     mzi.layer_num = elem_id + 1 # Odd side (start at 1 because layer 0 is phase shifters)
                     mzi.index = diag_id - (mzi.layer_num-1) # Don't divide by 2 to allow half-step offset between layers
+                    print(f"MZI added at layer {mzi.layer_num} index {mzi.index}")
                     mzi.phase_diff += phase_diff
                     mzi.active = True
                     self.insert_mzi(mzi)
@@ -163,12 +164,14 @@ class Compiler:
                                 [np.exp(sigma*1j) * np.cos(delta), -np.exp(sigma*1j) * np.sin(delta)]])
 
                     # x_offset = x if x < x_shape-2 else x_shape-2
-                    x_offset = x + 1 if x + 1 < x_shape-2 else x_shape-3
+                    # x_offset = x + 1 if x + 1 < x_shape-2 else x_shape-3
+                    x_offset = x+1
                     y_offset = x_offset
 
                     M = np.identity(x_shape, dtype="complex")
                     M[y_offset:y_offset+m.shape[0], x_offset:x_offset+m.shape[1]] = m
 
+                    print(f"x_offset = {x_offset}, y_offset = {y_offset}")
                     print(f"M = {np.round(M, 2)}")
 
                     V = M @ V
