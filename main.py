@@ -4,6 +4,10 @@ import numpy as np
 import sympy as sp
 from scipy.stats import unitary_group
 
+def is_unitary(m):
+    m = np.matrix(m)
+    return np.allclose(np.eye(m.shape[0]), m.H * m)
+
 # U = np.array([
 #     [1, 0, 0, 0, 0, 0],
 #     [0, 1, 0, 0, 0, 0],
@@ -22,8 +26,11 @@ from scipy.stats import unitary_group
 chip_generator = Clements(4)
 # U = unitary_group.rvs(4)
 U = chip_generator.generate_random_unitary()
+print(f"The matrix is unitary: {is_unitary(U)}")
 print("INITIAL UNITARY")
 print(np.round(U, 2))
+
+# phis, thetas, alphas = decompose_clements(U)
 
 compiler = Compiler()
 compiler.compile(U)
@@ -42,7 +49,7 @@ for row in compiler.mesh_elements:
             chip.configure_phase(layer_num=element.layer_num, shifter=element.index, phi=element.phi)
 
 chip.build()
-# chip.display()
+chip.display()
 
 
 sym_state = []

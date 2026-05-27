@@ -104,12 +104,15 @@ class Compiler:
         for diag_id in range(x_shape-1): # Diagonals starting from the bottom left
             for elem_id in range(diag_id + 1):
             # for elem_id in range(diag_id):
-                y = y_shape - diag_id + elem_id - 1
-                x = elem_id
                 print(f"diag_id = {diag_id}; elem_id = {elem_id}; element{diag_id + elem_id}({y}, {x})")
                 print(f"V = {np.round(V, 2)}")
 
+                # y = y_shape - diag_id + elem_id - 1
+                # x = elem_id
+
                 if diag_id % 2 == 0: # j = 1, 3, 5, ... (j starts at 1 while diag_id starts at 0)
+                    x = diag_id - elem_id
+                    y = y_shape-1 - elem_id
                     print(f"VM")
                     # VM
                     delta = 0
@@ -149,6 +152,9 @@ class Compiler:
                     self.insert_mzi(mzi)
 
                 else: # j = 0, 2, 4, ...
+                    y = y_shape - diag_id + elem_id - 1
+                    x = elem_id
+
                     print(f"MV")
                     # MV
                     delta = 0
