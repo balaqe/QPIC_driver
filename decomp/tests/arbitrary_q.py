@@ -99,7 +99,8 @@ class Compiler:
                 if not self.mesh_elements[layer_num][elem_num]:
                     self.mesh_elements[layer_num][elem_num] = Mzi(isactive=False)
 
-        V = deepcopy(U)
+        # V = deepcopy(U)
+        V = U.copy().astype(np.complex128)
 
         for diag_id in range(x_shape-1): # Diagonals starting from the bottom left
             for elem_id in range(diag_id + 1):
@@ -123,7 +124,13 @@ class Compiler:
 
                     print(f"delta = {delta}")
 
-                    sigma = np.angle(V[y][x])
+                    # sigma = np.angle(V[y][x])
+                    sigma = 0
+                    if y < y_shape-1:
+                        sigma = np.angle(V[y+1][x]) - np.angle(V[y][x])
+                    else:
+                        sigma = -np.angle(V[y][x])
+
                     phase_diff = np.angle(V[y][x]) - np.angle(V[x][y])
 
                     # phase_diff = np.angle(V[y][x]) - np.angle(V[y_shape-1 - y][x_shape-1 - x])
@@ -136,8 +143,14 @@ class Compiler:
                     x_offset = x if x < x_shape-2 else x_shape-2
                     y_offset = x_offset
 
-                    M = np.identity(x_shape, dtype="complex")
+                    M = np.identity(x_shape, dtype=np.complex128)
                     M[y_offset:y_offset+m.shape[0], x_offset:x_offset+m.shape[1]] = m
+
+                    print("Before:")
+                    print(np.round(V, 2))
+                    V[x][y] *= np.exp(1j*phase_diff)
+                    print("After:")
+                    print(np.round(V, 2))
 
                     print(f"M = {np.round(M, 2)}")
 
@@ -163,7 +176,14 @@ class Compiler:
                     else:
                         delta = np.pi/2
                     print(f"delta = {delta}")
-                    sigma = np.angle(V[y][x])
+
+                    # sigma = np.angle(V[y][x])
+                    sigma = 0
+                    if x > 0:
+                        sigma = np.angle(V[y][x-1]) - np.angle(V[y][x])
+                    else:
+                        sigma = -np.angle(V[y][x])
+
                     phase_diff = np.angle(V[y][x]) - np.angle(V[x][y])
 
                     m = np.array([[np.exp(sigma*1j) * np.sin(delta), np.exp(sigma*1j) * np.cos(delta)],\
@@ -174,11 +194,14 @@ class Compiler:
                     x_offset = x+1
                     y_offset = x_offset
 
-                    M = np.identity(x_shape, dtype="complex")
+                    M = np.identity(x_shape, dtype=np.complex128)
                     M[y_offset:y_offset+m.shape[0], x_offset:x_offset+m.shape[1]] = m
+
+                    V[x][y] *= np.exp(1j*phase_diff)
 
                     print(f"x_offset = {x_offset}, y_offset = {y_offset}")
                     print(f"M = {np.round(M, 2)}")
+
 
                     V = M @ V
 
