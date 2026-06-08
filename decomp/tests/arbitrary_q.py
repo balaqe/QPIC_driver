@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from mpmath.libmp.libintmath import MAX_EULER_CACHE
 import numpy as np
+from numpy import complex128, linalg
 # import sympy as sp
 from copy import deepcopy
 
@@ -71,6 +72,11 @@ class Compiler:
         x_shape = U.shape[1]
         y_shape = U.shape[0]
 
+        T = []
+        T_dagger = []
+        bruh = np.identity(x_shape, dtype=np.complex128)
+        bruh_dagger = np.identity(x_shape, dtype=np.complex128)
+
         # Initialize MZI structure given the mesh size
         # self.mzi = [[Mzi() for _ in range(x_shape+1)] for _ in range(y_shape)] # x_shape + 1 to account for initial phase shifters
         self.mzi = [[Mzi(isactive=False) for _ in range(x_shape)] for _ in range(y_shape+1)] # y_shape + 1 to account for initial phase shifters
@@ -135,6 +141,8 @@ class Compiler:
                     P = np.identity(x_shape, dtype=np.complex128)
                     P[x][x] = np.exp(1j*phase_diff)
                     V = V @ P
+                    T_dagger.append(P)
+                    bruh_dagger = bruh_dagger @ P
 
                     delta = 0
                     if V[y][x] != 0:
@@ -160,6 +168,8 @@ class Compiler:
                     print(f"M = {np.round(M, 2)}")
 
                     V = V @ M
+                    T_dagger.append(M)
+                    bruh_dagger = bruh_dagger @ M
 
                     mzi = Mzi(delta=delta, sigma=sigma)
                     mzi.layer_num = elem_id + 1 # Odd side (start at 1 because layer 0 is phase shifters)
@@ -195,6 +205,8 @@ class Compiler:
                     P = np.identity(x_shape, dtype=np.complex128)
                     P[y][y] = np.exp(1j*phase_diff)
                     V = P @ V
+                    T.append(P)
+                    bruh = P @ bruh
 
                     # V[x][y] *= np.exp(1j*phase_diff, dtype=np.complex128)
 
@@ -224,6 +236,8 @@ class Compiler:
 
 
                     V = M @ V
+                    T.append(M)
+                    bruh = M @ bruh
 
                     mzi = Mzi(delta=delta, sigma=sigma)
                     mzi.layer_num = x_shape - elem_id # Even side (don't subtract 1 because the initial phase shifters make the circuit length x_shape+1)
@@ -242,6 +256,31 @@ class Compiler:
 
         print(f"V = {np.round(V, 2)}")
         self.relax_mesh()
+
+        pre = np.identity(x_shape, dtype=np.complex128)
+        post = np.identity(x_shape, dtype=np.complex128)
+        for t in T:
+            pre =  pre @ t
+        for t_dagger in T_dagger:
+            post = t_dagger @ post
+
+        inv_pre = linalg.inv(bruh)
+        inv_post = linalg.inv(bruh_dagger)
+
+        print("\ninv_pre:")
+        print(np.round(inv_pre, 2))
+        print("\ninv_post:")
+        print(np.round(inv_post, 2))
+        print("\npre:")
+        print(np.round(pre, 2))
+        print("\npost:")
+        print(np.round(post, 2))
+
+        print(f"\npre=inv_pre:   {np.allclose(pre, inv_pre, rtol=1e-02)}")
+        print(f"\npost=inv_post: {np.allclose(post, inv_post, rtol=1e-02)}")
+
+        # return linalg.inv(bruh) @ V @ linalg.inv(bruh_dagger)
+        return inv_pre @ V @ inv_post
 
     def insert_mzi(self, mzi: Mzi):
         layer_num = mzi.layer_num
