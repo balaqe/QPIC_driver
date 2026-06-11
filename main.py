@@ -36,35 +36,34 @@ def is_unitary(m):
 #     [0, 0, 0, 1],
 # ])
 
-chip_generator = Clements(6) 
+chip_generator = Clements(4) 
 U = chip_generator.generate_random_unitary()
-print(f"The matrix is unitary: {is_unitary(U)}")
-print("INITIAL UNITARY")
+print("Initial unitary:")
 print(np.round(U, 2))
 
-phis, thetas, alphas = decompose_clements(U)
+# phis, thetas, alphas = decompose_clements(U)
 
 compiler = Compiler()
 remultiplied = compiler.compile(U)
 
-chip = Clements(6)
+chip = Clements(4)
 
 for row in compiler.mesh_elements:
     for element in row:
         if not element.active: continue
         if isinstance(element, Mzi):
-            print(f"mzi({element.layer_num}, {element.index}): phi1 = {element.phi[0]}, phi2 = {element.phi[1]}")
+            # print(f"mzi({element.layer_num}, {element.index}): phi1 = {element.phi[0]}, phi2 = {element.phi[1]}")
             index = element.index//2 if element.index%2 == 0 else element.index//2+1
             chip.configure_mzi(layer_num=element.layer_num, mzi=index, phi=[element.phi[0], element.phi[1]])
         if isinstance(element, Phase_shifter):
-            print(f"phase_shifter({element.layer_num}, {element.index}): phi = {element.phi}")
+            # print(f"phase_shifter({element.layer_num}, {element.index}): phi = {element.phi}")
             chip.configure_phase(layer_num=element.layer_num, shifter=element.index, phi=element.phi)
 
 chip.build()
 chip.display()
 
-# ex_state = [0, 1, 0, 0]
-ex_state = [0, 1, 0, 0, 0, 0]
+ex_state = [0, 1, 0, 0]
+# ex_state = [0, 1, 0, 0, 0, 0]
 print("\nResulting state")
 res = chip.execute(ex_state)
 for i in range(len(ex_state)):
@@ -80,7 +79,7 @@ print(np.round(res, 2))
 
 
 sym_state = []
-for i in range(6):
+for i in range(4):
     sym_state.append(sp.Symbol(f"c{i}"))
 
 # state = chip.execute(sym_state)
