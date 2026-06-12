@@ -22,10 +22,6 @@ class Mzi(Mesh_element):
 
         # self.layer_num: int # Index of the accompanying layer
         # self.index: int # Index within a given layer
-        self.upper_pred: Mzi | Phase_shifter # Reference to the upper predecessor
-        self.lower_pred: Mzi | Phase_shifter # Lower predecessor
-        self.upper_succ: Mzi | Phase_shifter # Upper successor
-        self.lower_succ: Mzi | Phase_shifter # Lower successor
 
         self.sigma = sigma if sigma else 0
         self.delta = delta if delta else 0
@@ -45,11 +41,9 @@ class Mzi(Mesh_element):
 class Phase_shifter(Mesh_element):
     def __init__(self, isactive=True):
         self.active = isactive
-        #
+
         # self.layer_num: int # Index of the accompanying layer
         # self.index: int # Index within a given layer
-        self.pred: Mzi | Phase_shifter # Reference to the predecessor
-        self.succ: Mzi | Phase_shifter # Successor
 
         self.phi: complex = 0
 
@@ -62,6 +56,7 @@ class Compiler:
         self.mzi = [] # List of MZIs
         self.phase_shifter = [] # List of phase shifters
         self.og_unitary = None # Original unitary before decomposition
+        self.phantom_phases = []
 
     def compile(self, U):
         self.og_unitary = deepcopy(U)
@@ -78,10 +73,7 @@ class Compiler:
         bruh_dagger = np.identity(x_shape, dtype=np.complex128)
 
         # Initialize MZI structure given the mesh size
-        # self.mzi = [[Mzi() for _ in range(x_shape+1)] for _ in range(y_shape)] # x_shape + 1 to account for initial phase shifters
         self.mzi = [[Mzi(isactive=False) for _ in range(x_shape)] for _ in range(y_shape+1)] # y_shape + 1 to account for initial phase shifters
-        # self.mesh_elements = [[None for _ in range(x_shape)] for _ in range(y_shape+1)] # y_shape + 1 to account for initial phase shifters
-        # self.phase_shifter = [[Phase_shifter() for _ in range(x_shape+1)] for _ in range(y_shape)]
         self.phase_shifter = [[Phase_shifter() for _ in range(x_shape)] for _ in range(y_shape+1)]
 
         self.mesh_elements = np.empty((y_shape+1, x_shape), dtype=object)
@@ -161,6 +153,14 @@ class Compiler:
                     mzi.active = True
                     self.insert_mzi(mzi)
 
+                    print(f"Above MZI added at layer {mzi.layer_num} and index {mzi.index}")
+
+                    phantom_shifter = Phase_shifter()
+                    phantom_shifter.phi = np.exp(1j*phase_diff)
+                    phantom_shifter.index = mzi.index
+                    phantom_shifter.layer_num = mzi.layer_num+1
+                    self.phantom_phases.append(phantom_shifter)
+
                 else: # j = 0, 2, 4, ...
                     # MV
                     y = y_shape - diag_id + elem_id - 1
@@ -214,49 +214,64 @@ class Compiler:
                     mzi.active = True
                     self.insert_mzi(mzi)
 
+                    print(f"Above MZI added at layer {mzi.layer_num} and index {mzi.index}")
+
+                    phantom_shifter = Phase_shifter()
+                    phantom_shifter.phi = np.exp(1j*phase_diff)
+                    phantom_shifter.index = mzi.index
+                    phantom_shifter.layer_num = mzi.layer_num
+                    self.phantom_phases.append(phantom_shifter)
+
         # Get alphas
         for i in range(V.shape[0]):
-            phase = np.angle(V[i][i])
-            self.mesh_elements[0][i].add_phase_offset(phase)
+            phantom_shifter = Phase_shifter()
+            phantom_shifter.phi = np.angle(V[i][i])
+            if self.og_unitary.shape[0] % 2 == 0: # Middle diagonal of mesh goes back down
+                phantom_shifter.index = i
+                phantom_shifter.layer_num = self.og_unitary.shape[0] - i
+                print(f"Alpha phase shifter added on layer {phantom_shifter.layer_num} and index {phantom_shifter.index}")
+            else: # Middle diagonal of mesh goes forward up
+                phantom_shifter.index = self.og_unitary.shape[0]-1 - i
+                phantom_shifter.layer_num = i+1
+                print(f"Alpha phase shifter added on layer {phantom_shifter.layer_num} and index {phantom_shifter.index}")
+
+            self.phantom_phases.append(phantom_shifter)
+            # self.mesh_elements[0][i].add_phase_offset(phase)
 
         print(f"V = {np.round(V, 2)}")
         self.relax_mesh()
 
         pre = np.identity(x_shape, dtype=np.complex128)
         post = np.identity(x_shape, dtype=np.complex128)
-        print("Saved elements")
+        # print("Saved elements")
         for t in T:
-            print("T[i]")
-            print(np.round(t, 2))
+            # print("T[i]")
+            # print(np.round(t, 2))
             pre =  pre @ t
         for t_dagger in T_dagger:
-            print("T_dagger[i]")
-            print(np.round(t_dagger, 2))
+            # print("T_dagger[i]")
+            # print(np.round(t_dagger, 2))
             post = t_dagger @ post
 
         inv_pre = linalg.inv(bruh)
         inv_post = linalg.inv(bruh_dagger)
 
-        # print("\ninv_pre:")
-        # print(np.round(inv_pre, 2))
-        # print("\ninv_post:")
-        # print(np.round(inv_post, 2))
-        # print("\npre:")
-        # print(np.round(pre, 2))
-        # print("\npost:")
-        # print(np.round(post, 2))
+        print("\ninv_pre:")
+        print(np.round(inv_pre, 2))
+        print("\ninv_post:")
+        print(np.round(inv_post, 2))
+        print("\npre:")
+        print(np.round(pre, 2))
+        print("\npost:")
+        print(np.round(post, 2))
 
         mid_P = np.identity(x_shape, dtype=np.complex128)
         for i in range(x_shape):
             angle = np.angle(V[i][i])
-            mid_P[i][i] = np.exp(1j*angle)
+            mid_P[i][i] = np.exp(-1j*angle)
 
-        print("V:")
-        print(np.round(V,2))
-        print("mid_P")
-        print(np.round(mid_P, 2))
-
-        return inv_pre @ mid_P @ inv_post
+        # return inv_pre @ mid_P @ inv_post
+        return pre @ mid_P @ post
 
     def insert_mzi(self, mzi: Mzi):
         layer_num = mzi.layer_num
@@ -265,24 +280,37 @@ class Compiler:
         self.mesh_elements[layer_num][index] = mzi
 
     def relax_mesh(self): # Absorb phase_diffs
-        for i, layer in enumerate(self.mesh_elements):
-            if i == 1:
-                for j, element in enumerate(layer):
-                    if not element.active: continue
-                    if isinstance(element, Phase_shifter): continue # Phase shifters don't have phase_diff
-                    if element.phase_diff != 0:
-                        self.mesh_elements[0][j+1].add_phase_offset(element.phase_diff)
-                continue
-            for j, element in enumerate(layer):
-                if not element.active: continue
-                if isinstance(element, Phase_shifter): continue # Phase shifters don't have phase_diff
-                if element.phase_diff != 0:
-                    for k in range(j+1, len(self.mesh_elements[0])):
-                        if self.mesh_elements[i-1][k].active:
-                            self.mesh_elements[i-1][k].add_phase_offset(element.phase_diff)
-                        if self.mesh_elements[i][k].active:
-                            self.mesh_elements[i][k].add_phase_offset(-element.phase_diff)
-                    element.phase_diff = 0
+        for phase in self.phantom_phases:
+            # print(f"phase_shifter({phase.layer_num}, {phase.index})")
+            index = phase.index
+            layer_num = phase.layer_num
+            phi = -phase.phi
+            for i in range(index+1, len(self.mesh_elements[0])):
+                if self.mesh_elements[layer_num-1][i].active:
+                    self.mesh_elements[layer_num-1][i].add_phase_offset(phi)
+                    # print(f"   mesh element offset added at [{layer_num}][{i}]")
+                if self.mesh_elements[layer_num][i].active:
+                    self.mesh_elements[layer_num][i].add_phase_offset(-phi)
+                    # print(f"   mesh element offset added at [{layer_num}][{i}]")
+
+        # for i, layer in enumerate(self.mesh_elements):
+        #     if i == 1:
+        #         for j, element in enumerate(layer):
+        #             if not element.active: continue
+        #             if isinstance(element, Phase_shifter): continue # Phase shifters don't have phase_diff
+        #             if element.phase_diff != 0:
+        #                 self.mesh_elements[0][j+1].add_phase_offset(element.phase_diff)
+        #         continue
+        #     for j, element in enumerate(layer):
+        #         if not element.active: continue
+        #         if isinstance(element, Phase_shifter): continue # Phase shifters don't have phase_diff
+        #         if element.phase_diff != 0:
+        #             for k in range(j+1, len(self.mesh_elements[0])):
+        #                 if self.mesh_elements[i-1][k].active:
+        #                     self.mesh_elements[i-1][k].add_phase_offset(element.phase_diff)
+        #                 if self.mesh_elements[i][k].active:
+        #                     self.mesh_elements[i][k].add_phase_offset(-element.phase_diff)
+        #             element.phase_diff = 0
 
     def is_unitary(self, m):
         m = np.matrix(m)

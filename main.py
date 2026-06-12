@@ -37,9 +37,10 @@ def is_unitary(m):
 # ])
 
 chip_generator = Clements(4) 
-U = chip_generator.generate_random_unitary()
+U = chip_generator.generate_random_unitary(seed=0)
 print("Initial unitary:")
 print(np.round(U, 2))
+print(f"Is unitary: {is_unitary(U)}")
 
 # phis, thetas, alphas = decompose_clements(U)
 
@@ -60,21 +61,21 @@ for row in compiler.mesh_elements:
             chip.configure_phase(layer_num=element.layer_num, shifter=element.index, phi=element.phi)
 
 chip.build()
-chip.display()
+# chip.display()
 
-ex_state = [0, 1, 0, 0]
-# ex_state = [0, 1, 0, 0, 0, 0]
-print("\nResulting state")
-res = chip.execute(ex_state)
-for i in range(len(ex_state)):
-    res[i] = abs(res[i])**2
-print(np.round(res, 2))
-
-print("\nActual state")
-res = U @ np.array(ex_state).reshape(-1, 1)
-for i in range(len(ex_state)):
-    res[i] = abs(res[i])**2
-print(np.round(res, 2))
+# ex_state = [0, 1, 0, 0]
+# # ex_state = [0, 1, 0, 0, 0, 0]
+# print("\nResulting state")
+# res = chip.execute(ex_state)
+# for i in range(len(ex_state)):
+#     res[i] = abs(res[i])**2
+# print(np.round(res, 2))
+#
+# print("\nActual state")
+# res = U @ np.array(ex_state).reshape(-1, 1)
+# for i in range(len(ex_state)):
+#     res[i] = abs(res[i])**2
+# print(np.round(res, 2))
 
 
 
@@ -90,6 +91,10 @@ for i in range(len(state)):
     for a in sp.preorder_traversal(state[i][0]):
         if isinstance(a, sp.Float):
             state[i][0] = state[i][0].subs(a, round(a, 1))
+
+# for i in range(len(state)):
+#     state[i] = np.abs(state[i])**2
+
 print(state)
 
 state2 = U @ np.array(sym_state).reshape(-1, 1)
@@ -99,10 +104,14 @@ for i in range(len(state2)):
     for a in sp.preorder_traversal(state2[i][0]):
         if isinstance(a, sp.Float):
             state2[i][0] = state2[i][0].subs(a, round(a, 1))
+
+# for i in range(len(state2)):
+#     state2[i] = np.abs(state2[i])**2
+
 print(state2)
 
-print("\nRemultiplied:")
-print(np.round(remultiplied, 2))
+# print("\nRemultiplied:")
+# print(np.round(remultiplied, 2))
 
 print("\nstate == state2")
 print(state == state2)
