@@ -78,13 +78,12 @@ chip.build()
 # print(np.round(res, 2))
 
 
-
 sym_state = []
 for i in range(4):
     sym_state.append(sp.Symbol(f"c{i}"))
 
-# state = chip.execute(sym_state)
-state = remultiplied @ np.array(sym_state).reshape(-1, 1)
+state = chip.execute(sym_state)
+# state = remultiplied @ np.array(sym_state).reshape(-1, 1)
 
 print("\nResulting state:")
 for i in range(len(state)):
@@ -115,3 +114,5 @@ print(state2)
 
 print("\nstate == state2")
 print(state == state2)
+
+print(f"IS_UNITARY: {is_unitary(chip.eff_unitary)}")
