@@ -82,8 +82,8 @@ sym_state = []
 for i in range(4):
     sym_state.append(sp.Symbol(f"c{i}"))
 
-state = chip.execute(sym_state)
-# state = remultiplied @ np.array(sym_state).reshape(-1, 1)
+# state = chip.execute(sym_state)
+state = remultiplied @ np.array(sym_state).reshape(-1, 1)
 
 print("\nResulting state:")
 for i in range(len(state)):
@@ -97,6 +97,7 @@ for i in range(len(state)):
 print(state)
 
 state2 = U @ np.array(sym_state).reshape(-1, 1)
+# state2 = remultiplied @ np.array(sym_state).reshape(-1, 1)
 
 print("\nActual state")
 for i in range(len(state2)):

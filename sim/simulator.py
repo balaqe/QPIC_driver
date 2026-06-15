@@ -61,21 +61,29 @@ class Clements:
         self.state = np.matmul(self.eff_unitary, self.state)
         return self.state
 
-    def generate_random_unitary(self):
+    def generate_random_unitary(self, seed=None):
         for i in range(1, self.M_layer.shape[0]):
+            if seed != None:
+                np.random.seed(seed)
+                seed += 1
             if i%2 == 0:
                 for j in range(self.M_layer.shape[1]//2):
-                    self.configure_mzi(layer_num=i, mzi=j, phi=[np.random.random()*2*np.pi, np.random.random()*2*np.pi])
+                    phi = [np.random.random()*2*np.pi, np.random.random()*2*np.pi]
+                    self.configure_mzi(layer_num=i, mzi=j, phi=phi)
+                    print(f"Mzi configured in layer {i} at index {2*j}. Phase: {np.round(phi, 2)}")
             else:
                 for j in range(self.M_layer.shape[1]//2 - 1):
-                    self.configure_mzi(layer_num=i, mzi=j, phi=[np.random.random()*2*np.pi, np.random.random()*2*np.pi])
+                    phi = [np.random.random()*2*np.pi, np.random.random()*2*np.pi]
+                    self.configure_mzi(layer_num=i, mzi=j, phi=phi)
+                    print(f"Mzi configured in layer {i} at index {2*j+1}. Phase: {np.round(phi, 2)}")
 
 
         self.build()
         return self.eff_unitary
 
     def display(self):
-        print(self.eff_unitary)
+        print("Resulting unitary:")
+        print(np.round(self.eff_unitary, 2))
 
 
 def main():
