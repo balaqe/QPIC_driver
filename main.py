@@ -1,5 +1,6 @@
 from decomp.tests.arbitrary_q import *
 from sim.simulator import Clements
+from sim.simulator2 import Simulator
 import numpy as np
 import sympy as sp
 from scipy.stats import unitary_group
@@ -47,20 +48,20 @@ print(f"Is unitary: {is_unitary(U)}")
 compiler = Compiler()
 remultiplied = compiler.compile(U)
 
-chip = Clements(4)
-
-for row in compiler.mesh_elements:
-    for element in row:
-        if not element.active: continue
-        if isinstance(element, Mzi):
-            # print(f"mzi({element.layer_num}, {element.index}): phi1 = {element.phi[0]}, phi2 = {element.phi[1]}")
-            index = element.index//2 if element.index%2 == 0 else element.index//2+1
-            chip.configure_mzi(layer_num=element.layer_num, mzi=index, phi=[element.phi[0], element.phi[1]])
-        if isinstance(element, Phase_shifter):
-            # print(f"phase_shifter({element.layer_num}, {element.index}): phi = {element.phi}")
-            chip.configure_phase(layer_num=element.layer_num, shifter=element.index, phi=element.phi)
-
-chip.build()
+# chip = Clements(4)
+#
+# for row in compiler.mesh_elements:
+#     for element in row:
+#         if not element: continue
+#         if isinstance(element, Mzi):
+#             # print(f"mzi({element.layer_num}, {element.index}): phi1 = {element.phi[0]}, phi2 = {element.phi[1]}")
+#             index = element.index//2 if element.index%2 == 0 else element.index//2+1
+#             chip.configure_mzi(layer_num=element.layer_num, mzi=index, phi=[element.phi[0], element.phi[1]])
+#         if isinstance(element, Phase_shifter):
+#             # print(f"phase_shifter({element.layer_num}, {element.index}): phi = {element.phi}")
+#             chip.configure_phase(layer_num=element.layer_num, shifter=element.index, phi=element.phi)
+#
+# chip.build()
 # chip.display()
 
 # ex_state = [0, 1, 0, 0]
@@ -83,7 +84,11 @@ for i in range(4):
     sym_state.append(sp.Symbol(f"c{i}"))
 
 # state = chip.execute(sym_state)
-state = remultiplied @ np.array(sym_state).reshape(-1, 1)
+# state = remultiplied @ np.array(sym_state).reshape(-1, 1)
+sim = Simulator()
+# state = sim.simulate(state=sym_state, mesh_elements=compiler.mesh_elements)
+eff_unitary = sim.simulate(state=sym_state, mesh_elements=compiler.mesh_elements)
+state = eff_unitary @ np.array(sym_state).reshape(-1, 1)
 
 print("\nResulting state:")
 for i in range(len(state)):
@@ -96,8 +101,8 @@ for i in range(len(state)):
 
 print(state)
 
-state2 = U @ np.array(sym_state).reshape(-1, 1)
-# state2 = remultiplied @ np.array(sym_state).reshape(-1, 1)
+# state2 = U @ np.array(sym_state).reshape(-1, 1)
+state2 = remultiplied @ np.array(sym_state).reshape(-1, 1)
 
 print("\nActual state")
 for i in range(len(state2)):
@@ -115,5 +120,3 @@ print(state2)
 
 print("\nstate == state2")
 print(state == state2)
-
-print(f"IS_UNITARY: {is_unitary(chip.eff_unitary)}")
