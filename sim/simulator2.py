@@ -6,6 +6,7 @@ class Simulator:
         self.dim = len(state)
         res = np.array(state).reshape(-1, 1)
         res_mat = np.identity(self.dim, dtype=np.complex128)
+        print("\n\n\n")
         for layer in reversed(mesh_elements):
             for element in layer:
                 if not element: continue
@@ -15,12 +16,16 @@ class Simulator:
                     print(np.round(mat, 2))
                     res = mat @ res
                     res_mat = res_mat @ mat
+                    print(f"\nres_mat:")
+                    print(np.round(res_mat, 2))
                 elif isinstance(element, Mzi):
                     mat = self.mzi_op(element)
                     print(f"mzi (layer {element.layer_num} index {element.index}")
                     print(np.round(mat, 2))
                     res = mat @ res
                     res_mat = res_mat @ mat
+                    print(f"\nres_mat:")
+                    print(np.round(res_mat, 2))
                 else:
                     print(f"ERROR!! Element type {type(element)} not supported")
         return res_mat
@@ -28,6 +33,8 @@ class Simulator:
     def phase_op(self, shifter: Phase_shifter):
         res = np.identity(self.dim, dtype=np.complex128)
         index = shifter.index
+        # if shifter.layer_num == 4 and shifter.index == 2:
+        #     index += 1
         # print(f"shifter.phi = {shifter.phi} at layer {shifter.layer_num} and index {shifter.index}")
         # print(f"type(shifter): {type(shifter)}")
         res[index][index] = np.exp(1j*shifter.phi)

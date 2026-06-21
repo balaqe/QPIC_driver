@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from sys import path_hooks
 from mpmath.libmp.libintmath import MAX_EULER_CACHE
 import numpy as np
 from numpy import complex128, isin, linalg
@@ -61,7 +62,7 @@ class Compiler:
 
         x_shape = U.shape[1]
         y_shape = U.shape[0]
-        self.num_layers = x_shape*2
+        self.num_layers = x_shape*2+1
 
         T = []
         T_dagger = []
@@ -151,8 +152,11 @@ class Compiler:
                     if y > 0: phase_diff = np.angle(V[y-1][x]) - np.angle(V[y][x])
                     else: phase_diff = -np.angle(V[y][x])
 
+                    diag_offset = y_shape - (diag_id + 2)
+                    index = diag_offset + elem_id
+
                     P = np.identity(x_shape, dtype=np.complex128)
-                    P[y][y] = np.exp(1j*phase_diff)
+                    P[index][index] = np.exp(1j*phase_diff)
                     # print("P:")
                     # print(np.round(P, 2))
                     V = P @ V
@@ -181,9 +185,8 @@ class Compiler:
                     bruh = M @ bruh
 
                     mzi = Mzi(delta=delta, sigma=sigma)
-                    mzi.layer_num = self.num_layers-1 - elem_id*2 # Even side (don't subtract 1 because the initial phase shifters make the circuit length x_shape+1)
-                    diag_offset = y_shape - (diag_id + 2)
-                    mzi.index = diag_offset + elem_id
+                    mzi.layer_num = self.num_layers-2 - elem_id*2 # Even side (don't subtract 1 because the initial phase shifters make the circuit length x_shape+1)
+                    mzi.index = index
 
                     print(f"MZI added at layer {mzi.layer_num} and index {mzi.index}")
 
@@ -194,8 +197,8 @@ class Compiler:
 
                     phantom_shifter = Phase_shifter()
                     phantom_shifter.phi = phase_diff
-                    phantom_shifter.index = mzi.index
-                    phantom_shifter.layer_num = mzi.layer_num-1
+                    phantom_shifter.index = index
+                    phantom_shifter.layer_num = mzi.layer_num+1
                     self.phantom_phases.append(phantom_shifter)
 
                     self.mesh_elements[phantom_shifter.layer_num][phantom_shifter.index] = phantom_shifter
@@ -258,12 +261,19 @@ class Compiler:
         #     i += 2
         #
         print("REMULTIPLY ORDER")
+        tmp = np.identity(x_shape, dtype=np.complex128)
         for t in T:
             print("T[i]")
             print(np.round(t, 2))
+            tmp = tmp @ t
+            print(f"\ntmp:")
+            print(np.round(tmp, 2))
         for t_dagger in reversed(T_dagger):
             print("T_dagger[i]")
             print(np.round(t_dagger, 2))
+            tmp = tmp @ t_dagger
+            print(f"\ntmp:")
+            print(np.round(tmp, 2))
 
         for t in T:
             pre =  pre @ t
