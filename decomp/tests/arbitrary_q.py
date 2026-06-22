@@ -175,7 +175,8 @@ class Compiler:
                     index = diag_offset + elem_id
 
                     P = np.identity(x_shape, dtype=np.complex128)
-                    P[index][index] = np.exp(1j*phase_diff)
+                    # P[index][index] = np.exp(1j*phase_diff)
+                    P[y][y] = np.exp(1j*phase_diff)
                     # print("P:")
                     # print(np.round(P, 2))
                     V = P @ V
@@ -206,6 +207,7 @@ class Compiler:
                     mzi = Mzi(delta=delta, sigma=sigma)
                     mzi.layer_num = self.num_layers-2 - elem_id*2 # Even side (don't subtract 1 because the initial phase shifters make the circuit length x_shape+1)
                     mzi.index = index
+                    # mzi.index = y
 
                     print(f"MZI added at layer {mzi.layer_num} and index {mzi.index}")
 
@@ -216,7 +218,8 @@ class Compiler:
 
                     phantom_shifter = Phase_shifter()
                     phantom_shifter.phi = phase_diff
-                    phantom_shifter.index = index
+                    # phantom_shifter.index = index
+                    phantom_shifter.index = y
                     phantom_shifter.layer_num = mzi.layer_num+1
                     self.phantom_phases.append(phantom_shifter)
 
@@ -261,7 +264,7 @@ class Compiler:
         #
         print("V:")
         print(f"{np.round(V, 2)}")
-        # self.relax_mesh()
+        self.relax_mesh()
 
         pre = np.identity(x_shape, dtype=np.complex128)
         post = np.identity(x_shape, dtype=np.complex128)
