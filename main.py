@@ -101,8 +101,8 @@ for i in range(len(state)):
 
 print(state)
 
-# state2 = U @ np.array(sym_state).reshape(-1, 1)
-state2 = remultiplied @ np.array(sym_state).reshape(-1, 1)
+state2 = U @ np.array(sym_state).reshape(-1, 1)
+# state2 = remultiplied @ np.array(sym_state).reshape(-1, 1)
 
 print("\nActual state")
 for i in range(len(state2)):

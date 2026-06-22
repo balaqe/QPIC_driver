@@ -206,24 +206,24 @@ class Compiler:
                     print(f"phantom phase added at layer {phantom_shifter.layer_num} and index {phantom_shifter.index}")
 
         # Get alphas
-        # if self.og_unitary.shape[0] % 2 == 0: # Middle diagonal of mesh goes back down
-        #     target_layer = self.num_layers-1
-        #     for i in range(V.shape[0]):
-        #         if isinstance(self.mesh_elements[target_layer][i], Mzi):
-        #             target_layer -= 1
-        #         phi = np.angle(V[i][i])
-        #         if self.mesh_elements[target_layer][i]:
-        #             self.mesh_elements[target_layer][i].add_phase_offset(phi)
-        #             print(f"Alpha phase shifter added on layer {target_layer} and index {i}")
-        #         else:
-        #             phantom_shifter = Phase_shifter()
-        #             phantom_shifter.phi = phi
-        #             phantom_shifter.index = i
-        #             phantom_shifter.layer_num = target_layer
-        #             self.phantom_phases.append(phantom_shifter)
-        #             self.mesh_elements[phantom_shifter.layer_num][phantom_shifter.index] = phantom_shifter
-        #             print(f"Alpha phase shifter added on layer {phantom_shifter.layer_num} and index {phantom_shifter.index}")
-        #         target_layer -= 1
+        if self.og_unitary.shape[0] % 2 == 0: # Middle diagonal of mesh goes back down
+            target_layer = self.num_layers-2
+            for i in range(V.shape[0]):
+                if isinstance(self.mesh_elements[target_layer][i], Mzi):
+                    target_layer -= 1
+                phi = -np.angle(V[i][i])
+                if self.mesh_elements[target_layer][i]:
+                    self.mesh_elements[target_layer][i].add_phase_offset(phi)
+                    print(f"Alpha phase shifter added on layer {target_layer} and index {i}")
+                else:
+                    phantom_shifter = Phase_shifter()
+                    phantom_shifter.phi = phi
+                    phantom_shifter.index = i
+                    phantom_shifter.layer_num = target_layer
+                    self.phantom_phases.append(phantom_shifter)
+                    self.mesh_elements[phantom_shifter.layer_num][phantom_shifter.index] = phantom_shifter
+                    print(f"Alpha phase shifter added on layer {phantom_shifter.layer_num} and index {phantom_shifter.index}")
+                target_layer -= 1
         # else: # Middle diagonal of mesh goes forward up
         #     target_layer = 1
         #     for i in range(V.shape[0]):
@@ -260,20 +260,6 @@ class Compiler:
         #     print(np.round(p @ m, 2))
         #     i += 2
         #
-        print("REMULTIPLY ORDER")
-        tmp = np.identity(x_shape, dtype=np.complex128)
-        for t in T:
-            print("T[i]")
-            print(np.round(t, 2))
-            tmp = tmp @ t
-            print(f"\ntmp:")
-            print(np.round(tmp, 2))
-        for t_dagger in reversed(T_dagger):
-            print("T_dagger[i]")
-            print(np.round(t_dagger, 2))
-            tmp = tmp @ t_dagger
-            print(f"\ntmp:")
-            print(np.round(tmp, 2))
 
         for t in T:
             pre =  pre @ t
@@ -310,14 +296,41 @@ class Compiler:
         # print("\npost:")
         # print(np.round(post, 2))
 
-        # mid_P = np.identity(x_shape, dtype=np.complex128)
-        # for i in range(x_shape):
-        #     angle = np.angle(V[i][i])
-        #     mid_P[i][i] = np.exp(-1j*angle)
+
+        print("REMULTIPLY ORDER")
+        intermed = np.identity(x_shape, dtype=np.complex128)
+        print("\npre\n")
+        for t in T:
+            print("T[i]")
+            print(np.round(t, 2))
+            intermed = intermed @ t
+            print(f"\nintermed:")
+            print(np.round(intermed, 2))
+
+        print("\nmid_P\n")
+        mid_P = np.identity(x_shape, dtype=np.complex128)
+        for i in range(x_shape):
+            tmp = np.identity(x_shape, dtype=np.complex128)
+            angle = np.angle(V[i][i])
+            tmp[i][i] = np.exp(-1j*angle)
+            print(f"mid:")
+            print(np.round(tmp, 2))
+            mid_P = mid_P @ tmp
+            intermed = intermed @ tmp
+            print(f"intermed:")
+            print(np.round(intermed, 2))
+
+        print("\npost\n")
+        for t_dagger in reversed(T_dagger):
+            print("T_dagger[i]")
+            print(np.round(t_dagger, 2))
+            intermed = intermed @ t_dagger
+            print(f"\nintermed:")
+            print(np.round(intermed, 2))
 
         # return inv_pre @ mid_P @ inv_post
-        # return pre @ mid_P @ post
-        return pre @ post
+        return pre @ mid_P @ post
+        # return pre @ post
 
     def insert_mzi(self, mzi: Mzi):
         layer_num = mzi.layer_num
