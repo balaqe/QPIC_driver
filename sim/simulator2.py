@@ -12,20 +12,20 @@ class Simulator:
                 if not element: continue
                 if isinstance(element, Phase_shifter):
                     mat = self.phase_op(element)
-                    print(f"phase (layer {element.layer_num} index {element.index}")
-                    print(np.round(mat, 2))
+                    # print(f"phase (layer {element.layer_num} index {element.index}")
+                    # print(np.round(mat, 2))
                     res = mat @ res
                     res_mat = res_mat @ mat
-                    print(f"\nres_mat:")
-                    print(np.round(res_mat, 2))
+                    # print(f"\nres_mat:")
+                    # print(np.round(res_mat, 2))
                 elif isinstance(element, Mzi):
                     mat = self.mzi_op(element)
-                    print(f"mzi (layer {element.layer_num} index {element.index}")
-                    print(np.round(mat, 2))
+                    # print(f"mzi (layer {element.layer_num} index {element.index}")
+                    # print(np.round(mat, 2))
                     res = mat @ res
                     res_mat = res_mat @ mat
-                    print(f"\nres_mat:")
-                    print(np.round(res_mat, 2))
+                    # print(f"\nres_mat:")
+                    # print(np.round(res_mat, 2))
                 else:
                     print(f"ERROR!! Element type {type(element)} not supported")
         return res_mat

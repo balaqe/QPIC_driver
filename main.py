@@ -88,6 +88,8 @@ for i in range(4):
 sim = Simulator()
 # state = sim.simulate(state=sym_state, mesh_elements=compiler.mesh_elements)
 eff_unitary = sim.simulate(state=sym_state, mesh_elements=compiler.mesh_elements)
+print("eff_unitary:")
+print(np.round(eff_unitary, 2))
 state = eff_unitary @ np.array(sym_state).reshape(-1, 1)
 
 print("\nResulting state:")
@@ -101,7 +103,12 @@ for i in range(len(state)):
 
 print(state)
 
-state2 = U @ np.array(sym_state).reshape(-1, 1)
+compiler.relax_mesh()
+eff_unitary = sim.simulate(state=sym_state, mesh_elements=compiler.mesh_elements)
+print("eff_unitary:")
+print(np.round(eff_unitary, 2))
+# state2 = U @ np.array(sym_state).reshape(-1, 1)
+state2 = eff_unitary @ np.array(sym_state).reshape(-1, 1)
 # state2 = remultiplied @ np.array(sym_state).reshape(-1, 1)
 
 print("\nActual state")

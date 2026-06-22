@@ -71,6 +71,25 @@ class Compiler:
 
         self.mesh_elements = np.empty((self.num_layers, y_shape), dtype=object)
 
+        for i in range(x_shape):
+            shifter = Phase_shifter()
+            shifter.index = i
+            shifter.layer_num = 0
+            self.mesh_elements[0][i] = shifter
+            print(f"Phase shifter added on layer 0 at index {i}")
+        for i in range(3, self.num_layers, 4):
+            shifter1 = Phase_shifter()
+            shifter1.index = 0
+            shifter1.layer_num = i
+            self.mesh_elements[i][0] = shifter1
+            print(f"Phase shifter added on layer {i} at index 0")
+
+            shifter2 = Phase_shifter()
+            shifter2.index = x_shape-1
+            shifter2.layer_num = i
+            self.mesh_elements[i][x_shape-1] = shifter2
+            print(f"Phase shifter added on layer {i} at index {x_shape-1}")
+
         V = np.conjugate(U.copy().astype(np.complex128))
         # V = -1*(U.copy().astype(np.complex128))
 
@@ -346,20 +365,44 @@ class Compiler:
                 print(f"phi: {np.round(element.phi, 4)}")
 
     def relax_mesh(self): # Absorb phase_diffs
-        for phase in self.phantom_phases:
-            self.print_elements()
-            print(f"\n\ndissolving phase_shifter({phase.layer_num}, {phase.index}) with offset {phase.phi}")
-            index = phase.index
-            layer_num = phase.layer_num
-            phi = -phase.phi
-            for i in range(index+1, len(self.mesh_elements[0])):
-                print(f"i = {i}")
-                if self.mesh_elements[layer_num-1][i]:
-                    self.mesh_elements[layer_num-1][i].add_phase_offset(phi)
-                    print(f"   offset of {phi} added at [{layer_num-1}][{i}]")
-                if self.mesh_elements[layer_num][i]:
-                    self.mesh_elements[layer_num][i].add_phase_offset(-phi)
-                    print(f"   offset of {-phi} added at [{layer_num}][{i}]")
+        shifter = self.mesh_elements[2][1]
+        index = shifter.index
+        layer_num = shifter.layer_num
+        phi = shifter.phi
+        print(f"Dissolving phase shifter [2][1] with phi = {shifter.phi}")
+        shifter.phi = 0
+        for i in reversed(range(0, index)):
+            print(f"i = {i}")
+            if self.mesh_elements[layer_num-1][i]:
+                self.mesh_elements[layer_num-1][i].add_phase_offset(phi)
+                print(f"   offset of {phi} added at [{layer_num-1}][{i}]")
+            if self.mesh_elements[layer_num+1][i]:
+                self.mesh_elements[layer_num+1][i].add_phase_offset(-phi)
+                print(f"   offset of {-phi} added at [{layer_num+1}][{i}]")
+        # for i in range(index+1, len(self.mesh_elements[0])):
+        #     print(f"i = {i}")
+        #     if self.mesh_elements[layer_num-1][i]:
+        #         self.mesh_elements[layer_num-1][i].add_phase_offset(phi)
+        #         print(f"   offset of {phi} added at [{layer_num-1}][{i}]")
+        #     if self.mesh_elements[layer_num+1][i]:
+        #         self.mesh_elements[layer_num+1][i].add_phase_offset(-phi)
+        #         print(f"   offset of {-phi} added at [{layer_num+1}][{i}]")
+
+        # for phase in self.phantom_phases:
+        #     self.print_elements()
+        #     print(f"\n\ndissolving phase_shifter({phase.layer_num}, {phase.index}) with offset {phase.phi}")
+        #     index = phase.index
+        #     layer_num = phase.layer_num
+        #     if layer_num >= self.num_layers-1: continue
+        #     phi = -phase.phi
+        #     for i in range(index+1, len(self.mesh_elements[0])):
+        #         print(f"i = {i}")
+        #         if self.mesh_elements[layer_num-1][i]:
+        #             self.mesh_elements[layer_num-1][i].add_phase_offset(phi)
+        #             print(f"   offset of {phi} added at [{layer_num-1}][{i}]")
+        #         if self.mesh_elements[layer_num+1][i]:
+        #             self.mesh_elements[layer_num+1][i].add_phase_offset(-phi)
+        #             print(f"   offset of {-phi} added at [{layer_num+1}][{i}]")
 
     def is_unitary(self, m):
         m = np.matrix(m)
