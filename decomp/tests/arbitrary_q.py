@@ -368,7 +368,7 @@ class Compiler:
         cycle = 0
         for shifter in self.phantom_phases:
             # shifter = self.mesh_elements[2][1]
-            if cycle == 2: break
+            # if cycle == 3: break
             if shifter.layer_num >= self.num_layers-1: continue
             if shifter.layer_num < 1: continue
             index = shifter.index
@@ -378,6 +378,16 @@ class Compiler:
             shifter.phi = 0
 
             successor = self.mesh_elements[layer_num+1][index]
+            predecessor = self.mesh_elements[layer_num-1][index]
+
+            # If an external phase shifter is already present
+            if isinstance(successor, Phase_shifter):
+                successor.add_phase_offset(phi)
+                continue
+            if isinstance(predecessor, Phase_shifter):
+                predecessor.add_phase_offset(phi)
+                continue
+
             if isinstance(successor, Mzi) and successor.index == index: # Phantom phase on top input (push up)
                 for i in reversed(range(0, index)):
                     print(f"i = {i}")
