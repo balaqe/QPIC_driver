@@ -365,20 +365,38 @@ class Compiler:
                 print(f"phi: {np.round(element.phi, 4)}")
 
     def relax_mesh(self): # Absorb phase_diffs
-        shifter = self.mesh_elements[2][1]
-        index = shifter.index
-        layer_num = shifter.layer_num
-        phi = shifter.phi
-        print(f"Dissolving phase shifter [2][1] with phi = {shifter.phi}")
-        shifter.phi = 0
-        for i in reversed(range(0, index)):
-            print(f"i = {i}")
-            if self.mesh_elements[layer_num-1][i]:
-                self.mesh_elements[layer_num-1][i].add_phase_offset(phi)
-                print(f"   offset of {phi} added at [{layer_num-1}][{i}]")
-            if self.mesh_elements[layer_num+1][i]:
-                self.mesh_elements[layer_num+1][i].add_phase_offset(-phi)
-                print(f"   offset of {-phi} added at [{layer_num+1}][{i}]")
+        cycle = 0
+        for shifter in self.phantom_phases:
+            # shifter = self.mesh_elements[2][1]
+            if cycle == 2: break
+            if shifter.layer_num >= self.num_layers-1: continue
+            if shifter.layer_num < 1: continue
+            index = shifter.index
+            layer_num = shifter.layer_num
+            phi = shifter.phi
+            print(f"Dissolving phase shifter [{shifter.layer_num}][{shifter.index}] with phi = {shifter.phi}")
+            shifter.phi = 0
+
+            successor = self.mesh_elements[layer_num+1][index]
+            if isinstance(successor, Mzi) and successor.index == index: # Phantom phase on top input (push up)
+                for i in reversed(range(0, index)):
+                    print(f"i = {i}")
+                    if self.mesh_elements[layer_num-1][i]:
+                        self.mesh_elements[layer_num-1][i].add_phase_offset(phi)
+                        print(f"   offset of {phi} added at [{layer_num-1}][{i}]")
+                    if self.mesh_elements[layer_num+1][i]:
+                        self.mesh_elements[layer_num+1][i].add_phase_offset(-phi)
+                        print(f"   offset of {-phi} added at [{layer_num+1}][{i}]")
+            else: # Phantom phase on bottom input (push down)
+                for i in range(index, len(self.mesh_elements[0])):
+                    print(f"i = {i}")
+                    if self.mesh_elements[layer_num-1][i]:
+                        self.mesh_elements[layer_num-1][i].add_phase_offset(phi)
+                        print(f"   offset of {phi} added at [{layer_num-1}][{i}]")
+                    if self.mesh_elements[layer_num+1][i]:
+                        self.mesh_elements[layer_num+1][i].add_phase_offset(-phi)
+                        print(f"   offset of {-phi} added at [{layer_num+1}][{i}]")
+            cycle += 1
         # for i in range(index+1, len(self.mesh_elements[0])):
         #     print(f"i = {i}")
         #     if self.mesh_elements[layer_num-1][i]:
