@@ -101,10 +101,10 @@ class Compiler:
                     y = y_shape-1 - elem_id
 
                     sigma = 0
-                    # if y < y_shape-1:
-                    #     sigma = np.angle(V[y][x+1]) - np.angle(V[y][x])
-                    # else:
-                    #     sigma = -np.angle(V[y][x])
+                    if y < y_shape-1:
+                        sigma = np.angle(V[y][x+1]) - np.angle(V[y][x])
+                    else:
+                        sigma = -np.angle(V[y][x])
 
                     phase_diff = 0
                     if x < x_shape-1: phase_diff = np.angle(V[y][x+1]) - np.angle(V[y][x])
@@ -162,11 +162,11 @@ class Compiler:
                     x = elem_id
 
                     sigma = 0
-                    # if x > 0:
-                    #     sigma = np.angle(V[y][x-1]) - np.angle(V[y][x])
-                    # else:
-                    #     sigma = -np.angle(V[y][x])
-                    #
+                    if x > 0:
+                        sigma = np.angle(V[y][x-1]) - np.angle(V[y][x])
+                    else:
+                        sigma = -np.angle(V[y][x])
+
                     phase_diff = 0
                     if y > 0: phase_diff = np.angle(V[y-1][x]) - np.angle(V[y][x])
                     else: phase_diff = -np.angle(V[y][x])
@@ -374,7 +374,7 @@ class Compiler:
             index = shifter.index
             layer_num = shifter.layer_num
             phi = shifter.phi
-            print(f"Dissolving phase shifter [{shifter.layer_num}][{shifter.index}] with phi = {shifter.phi}")
+            # print(f"Dissolving phase shifter [{shifter.layer_num}][{shifter.index}] with phi = {shifter.phi}")
             shifter.phi = 0
 
             successor = self.mesh_elements[layer_num+1][index]
@@ -390,22 +390,22 @@ class Compiler:
 
             if isinstance(successor, Mzi) and successor.index == index: # Phantom phase on top input (push up)
                 for i in reversed(range(0, index)):
-                    print(f"i = {i}")
+                    # print(f"i = {i}")
                     if self.mesh_elements[layer_num-1][i]:
                         self.mesh_elements[layer_num-1][i].add_phase_offset(phi)
-                        print(f"   offset of {phi} added at [{layer_num-1}][{i}]")
+                        # print(f"   offset of {phi} added at [{layer_num-1}][{i}]")
                     if self.mesh_elements[layer_num+1][i]:
                         self.mesh_elements[layer_num+1][i].add_phase_offset(-phi)
-                        print(f"   offset of {-phi} added at [{layer_num+1}][{i}]")
+                        # print(f"   offset of {-phi} added at [{layer_num+1}][{i}]")
             else: # Phantom phase on bottom input (push down)
                 for i in range(index, len(self.mesh_elements[0])):
-                    print(f"i = {i}")
+                    # print(f"i = {i}")
                     if self.mesh_elements[layer_num-1][i]:
                         self.mesh_elements[layer_num-1][i].add_phase_offset(phi)
-                        print(f"   offset of {phi} added at [{layer_num-1}][{i}]")
+                        # print(f"   offset of {phi} added at [{layer_num-1}][{i}]")
                     if self.mesh_elements[layer_num+1][i]:
                         self.mesh_elements[layer_num+1][i].add_phase_offset(-phi)
-                        print(f"   offset of {-phi} added at [{layer_num+1}][{i}]")
+                        # print(f"   offset of {-phi} added at [{layer_num+1}][{i}]")
             cycle += 1
         # for i in range(index+1, len(self.mesh_elements[0])):
         #     print(f"i = {i}")

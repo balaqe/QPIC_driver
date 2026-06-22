@@ -37,7 +37,7 @@ def is_unitary(m):
 #     [0, 0, 0, 1],
 # ])
 
-chip_generator = Clements(4) 
+chip_generator = Clements(6) 
 U = chip_generator.generate_random_unitary(seed=0)
 print("Initial unitary:")
 print(np.round(U, 2))
@@ -80,7 +80,7 @@ remultiplied = compiler.compile(U)
 
 
 sym_state = []
-for i in range(4):
+for i in range(6):
     sym_state.append(sp.Symbol(f"c{i}"))
 
 # state = chip.execute(sym_state)
@@ -107,8 +107,8 @@ compiler.relax_mesh()
 eff_unitary = sim.simulate(state=sym_state, mesh_elements=compiler.mesh_elements)
 print("eff_unitary:")
 print(np.round(eff_unitary, 2))
-# state2 = U @ np.array(sym_state).reshape(-1, 1)
-state2 = eff_unitary @ np.array(sym_state).reshape(-1, 1)
+state2 = U @ np.array(sym_state).reshape(-1, 1)
+# state2 = eff_unitary @ np.array(sym_state).reshape(-1, 1)
 # state2 = remultiplied @ np.array(sym_state).reshape(-1, 1)
 
 print("\nActual state")
